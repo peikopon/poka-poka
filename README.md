@@ -1,4 +1,4 @@
-# Poka-Poka 🃏
+# <img src="assets/icons/app-icon.svg" width="34" align="top" alt=""> Poka-Poka
 
 **Real-time, multiplayer Texas Hold'em for phones.** Friends open the site in a
 mobile browser, one player **hosts** a table and sets the rules, everyone else
