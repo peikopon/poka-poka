@@ -185,6 +185,12 @@ html, body {
 .home__lockup { display: flex; align-items: center; gap: 14px; }
 .home__logo svg { width: 64px; height: 64px; display: block; }
 .home__brand .btn { margin-top: 18px; }
+/* Author credit, pinned to the bottom-left of the home screen. */
+.home__credit {
+  position: absolute; left: clamp(16px, 5vw, 56px); bottom: 14px;
+  font: 500 11px var(--f-body); color: var(--muted-2); letter-spacing: .01em;
+}
+.home__credit strong { color: var(--muted); font-weight: 700; }
 .home__join { width: 260px; }
 /* breathing room between the code boxes and the Join button */
 .home__join .code-entry { margin-bottom: 16px; }

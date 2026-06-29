@@ -41,10 +41,9 @@ static front-end *and* runs the authoritative game over WebSocket on the same po
 
 ## Preview
 
-> 📹 **Demo video:** add a short screen recording at `assets/demo.mp4` (or a GIF at
-> `assets/demo.gif`) and it will show here:
->
-> <!-- ![Poka-Poka demo](assets/demo.gif) -->
+![Poka-Poka demo](assets/demo.gif)
+
+*A full loop: Home → Lobby → a hand (deal · your bet · chips to the pot) → showdown → results.*
 
 **No-server preview:** the entire UI can be rendered from sample data without starting
 a game — handy for design review. Run the app and open:
@@ -178,8 +177,14 @@ design system.
 
 ---
 
-## License / status
+## License
 
-Casual hobby project — No-Limit Texas Hold'em v1, no accounts, no real money.
-Pot-Limit / Fixed-Limit betting, a hand-history log, and persistence are possible
-future additions.
+© 2026 **peikopon**. Licensed under **Creative Commons Attribution-NonCommercial 4.0
+International (CC BY-NC 4.0)** — see [LICENSE](LICENSE).
+
+You may view, share, and adapt this project **with attribution** and **for
+non-commercial purposes only**. Commercial use is not permitted without permission.
+
+> Status: casual hobby project — No-Limit Texas Hold'em v1, no accounts, no real money.
+> Pot-Limit / Fixed-Limit betting, a hand-history log, and persistence are possible
+> future additions.

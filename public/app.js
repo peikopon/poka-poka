@@ -97,9 +97,20 @@ async function boot() {
 
   const params = new URLSearchParams(location.search);
   const mock = params.get('mock');
+  const frame = params.get('frame');
 
   buildStaticUI();
   wireEvents();
+
+  // Demo helper: `?frame=<name>` renders ONE screen statically (no socket) so a
+  // recorder can capture each as its own navigation. See renderDemoFrame().
+  if (frame) {
+    mockMode = 'frame';
+    setConn(true);
+    window.__pokapoka = { applyState, getState: () => state };
+    renderDemoFrame(frame);
+    return;
+  }
 
   if (mock && MOCKS[mock]) {
     // Serverless preview: render a fixture, skip the socket entirely.
@@ -142,6 +153,33 @@ async function boot() {
 
   // If we have a saved session, net auto-rejoins on open; otherwise show Home.
   showScreen('home');
+}
+
+// Render ONE demo screen statically for the README GIF recorder (`?frame=`).
+function renderDemoFrame(name) {
+  const showStatic = (n) => {
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.dataset.screen === n));
+    document.body.classList.toggle('on-table', n === 'table');
+    currentScreen = n;
+  };
+  const turnWith = (mut) => { const s = structuredClone(MOCKS.turn); mut(s); return s; };
+  switch (name) {
+    case 'home': showStatic('home'); break;
+    case 'config': case 'rules': showStatic('rules'); break;
+    case 'avatar': case 'identity': {
+      const ni = document.getElementById('name-input');
+      if (ni) { ni.value = 'Mia'; ni.dispatchEvent(new Event('input', { bubbles: true })); }
+      showStatic('identity');
+      break;
+    }
+    case 'lobby': applyState(MOCKS.lobby); break;
+    case 'table': case 'turn': applyState(MOCKS.turn); break;
+    case 'bet': applyState(turnWith((s) => { s.players.find((p) => p.id === 'p1').bet = 80; })); break;
+    case 'flop': applyState(turnWith((s) => { s.hand.board = ['As', 'Kh', '7d', '2c']; s.players.forEach((p) => { p.bet = 0; }); })); break;
+    case 'showdown': case 'handover': applyState(MOCKS.handover); break;
+    case 'results': applyState(MOCKS.showdown); break;
+    default: showStatic('home');
+  }
 }
 
 // ── Screen routing ─────────────────────────────────────────────────────────────
