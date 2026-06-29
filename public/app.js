@@ -54,6 +54,7 @@ let prevBoardLen = 0;      // for community-card reveal animation
 let prevHandNumber = null; // for hole-card deal animation
 let wasMyTurn = false;     // to chime once when it becomes my turn
 let prevPhase = null;      // to detect hand-over / game transitions
+let actDeadlineLocal = null; // turn deadline anchored to THIS device's clock
 
 // pre-game (pre-state) flow scratch
 const draft = {
@@ -199,6 +200,11 @@ let animDealHole = false; // animate the deal of my hole cards
 function applyState(s) {
   detectTransitions(s);       // diff against trackers (still holding prev values)
   state = s;                  // commit before rendering
+  // Anchor the turn clock to OUR device clock using the server's remaining ms
+  // (avoids cross-device clock skew). Fall back to the absolute deadline for
+  // serverless mock fixtures that don't carry actMs.
+  const ams = s?.hand?.actMs;
+  actDeadlineLocal = (ams != null) ? Date.now() + ams : (s?.hand?.actDeadline ?? null);
   actionPending = false;      // server has spoken; unlock the action bar
   showScreen(screenFor(s));
   render();
@@ -232,11 +238,18 @@ function detectTransitions(s) {
   }
   // It just became my turn.
   if (hand?.legal && !wasMyTurn) sound.play('turn');
+
+  // A betting round ended → the street bets get gathered into the pot. This
+  // happens when the board grows (new street) or the hand ends. Animate it
+  // NOW, while the OLD bet badges are still in the DOM (before the re-render).
+  const gathered = (boardLen > prevBoardLen) || (phase === 'hand-over' && prevPhase !== 'hand-over');
+  if (gathered && currentScreen === 'table') animateGather();
+
   // Hand finished / game finished.
   if (phase === 'hand-over' && prevPhase !== 'hand-over') {
     sound.play(s?.result?.showdown ? 'win' : 'chip');
   }
-  if (phase === 'game-over' && prevPhase !== 'game-over') sound.play('win');
+  if (phase === 'game-over' && prevPhase !== 'game-over') sound.play('congrats');
 }
 
 function render() {
@@ -410,8 +423,9 @@ function buildEmoteWheel() {
     b.textContent = e;
     b.setAttribute('aria-label', `React ${e}`);
     b.addEventListener('click', () => {
+      // No optimistic float — the server fans the react back to everyone
+      // (incl. the sender), so floating here too would show it twice.
       react(e);
-      floatEmote(e);
       document.getElementById('emote-wheel').hidden = true;
     });
     wheel.appendChild(b);
@@ -969,6 +983,14 @@ function renderYou(players, you) {
   const crown = me.isHost ? `<svg aria-hidden="true"><use href="${SPRITE}#host-crown"></use></svg>` : '';
   const role = blindRoles(players, state.hand)[me.id];
 
+  // Your chips committed THIS betting round (before they're gathered to the pot).
+  const youBet = me.bet > 0
+    ? `<div class="you-bet" aria-label="Your bet this round">
+         <span class="you-bet__label">BET</span>
+         <span class="you-bet__amt"><svg aria-hidden="true"><use href="#poker-chip"></use></svg>${fmt(me.bet)}</span>
+       </div>`
+    : '';
+
   zone.innerHTML = `
     <div class="you-hole${animDealHole && dealt ? ' is-dealing' : ''}">${hole}</div>
     <div class="you-plate">
@@ -977,6 +999,7 @@ function renderYou(players, you) {
         <div class="you-plate__name">${escapeHtml(me.name)} ${blindBadge(role)} ${crown}</div>
         <div class="you-plate__chips">${fmt(me.chips)}</div>
       </div>
+      ${youBet}
     </div>`;
 }
 
@@ -1137,8 +1160,6 @@ function applyPreset(kind) {
     case '2x':   amt = multipleRaiseTo(hand, legal, 2); break;
     case '3x':   amt = multipleRaiseTo(hand, legal, 3); break;
     case 'allin': amt = legal.maxRaiseTo; break;
-    case 'half': amt = potRaiseTo(hand, legal, 0.5); break;
-    case 'pot':  amt = potRaiseTo(hand, legal, 1); break;
     default: return;
   }
   setAbAmount(clamp(amt, legal.minRaiseTo, legal.maxRaiseTo), 'preset-click');
@@ -1152,25 +1173,12 @@ function multipleRaiseTo(hand, legal, mult) {
   return clamp(base * mult, legal.minRaiseTo, legal.maxRaiseTo);
 }
 
-// Pot-sized "raise to": call first, then bet `frac × (pot after calling)`.
-function potRaiseTo(hand, legal, frac) {
-  const pot = hand.pot || 0;
-  const call = legal.callAmount || 0;
-  const potAfterCall = pot + call;
-  const raiseBy = Math.round(potAfterCall * frac);
-  // "raise to" = current bet we must match + our raise increment
-  const to = (hand.currentBet || 0) + call + raiseBy;
-  return clamp(to, legal.minRaiseTo, legal.maxRaiseTo);
-}
-
 // Figure out which preset (if any) the current amount matches.
 function detectPreset(legal, hand) {
   if (abAmount === legal.minRaiseTo) return 'min';
   if (abAmount === legal.maxRaiseTo) return 'allin';
   if (abAmount === multipleRaiseTo(hand, legal, 2)) return '2x';
   if (abAmount === multipleRaiseTo(hand, legal, 3)) return '3x';
-  if (abAmount === potRaiseTo(hand, legal, 1)) return 'pot';
-  if (abAmount === potRaiseTo(hand, legal, 0.5)) return 'half';
   return null;
 }
 
@@ -1263,6 +1271,47 @@ function clearChatUnread() {
   if (d) d.hidden = true;
 }
 
+// Fly a chip from each player's current bet to the pot, then pulse the pot.
+// Reads the CURRENT (pre-render) DOM, so the bet badges must still be present.
+function animateGather() {
+  const wrap = document.querySelector('.felt-wrap');
+  const pot = document.getElementById('pot-pill');
+  if (!wrap || !pot) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  const potRect = pot.getBoundingClientRect();
+  const px = potRect.left + potRect.width / 2 - wrapRect.left;
+  const py = potRect.top + potRect.height / 2 - wrapRect.top;
+
+  // Sources: every visible bet badge (opponents) + your own bet, if any.
+  const sources = [...document.querySelectorAll('.seat__bet'), document.querySelector('.you-bet')].filter(Boolean);
+  let any = false;
+  sources.forEach((src) => {
+    const r = src.getBoundingClientRect();
+    if (r.width === 0) return;
+    any = true;
+    const x0 = r.left + r.width / 2 - wrapRect.left;
+    const y0 = r.top + r.height / 2 - wrapRect.top;
+    const chip = document.createElement('div');
+    chip.className = 'chip-fly';
+    chip.innerHTML = svgUse('poker-chip');
+    chip.style.left = `${x0}px`;
+    chip.style.top = `${y0}px`;
+    chip.style.setProperty('--dx', `${px - x0}px`);
+    chip.style.setProperty('--dy', `${py - y0}px`);
+    wrap.appendChild(chip);
+    setTimeout(() => chip.remove(), 600);
+  });
+  if (any) { sound.play('chip'); pulsePot(); }
+}
+
+function pulsePot() {
+  const p = document.getElementById('pot-pill');
+  if (!p) return;
+  p.classList.remove('pot-bump');
+  void p.offsetWidth; // restart the animation
+  p.classList.add('pot-bump');
+}
+
 function floatEmote(emote) {
   const layer = document.getElementById('emote-floats');
   if (!layer) return;
@@ -1279,7 +1328,7 @@ function floatEmote(emote) {
    TURN-TIMER TICKER — counts down active seat from hand.actDeadline (epoch ms)
    ════════════════════════════════════════════════════════════════════════════ */
 setInterval(() => {
-  const deadline = state?.hand?.actDeadline;
+  const deadline = actDeadlineLocal;
   const badge = document.querySelector('.seat__timer');
   if (badge) {
     if (deadline) {
@@ -1300,7 +1349,7 @@ function updateAbTimer() {
   const wrap = document.getElementById('ab-timer');
   const el = document.getElementById('ab-timer-text');
   if (!wrap || !el) return;
-  const deadline = state?.hand?.actDeadline;
+  const deadline = actDeadlineLocal;
   if (wrap.hidden || !deadline || !state?.hand?.legal) { lastTickLeft = null; return; }
   const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
   el.textContent = `${left}s`;

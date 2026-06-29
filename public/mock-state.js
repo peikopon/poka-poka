@@ -82,7 +82,8 @@ export const turnState = {
     street: 'flop',
     activeSeat: 0,
     activePlayerId: 'p1',
-    actDeadline: Date.now() + 12000, // ~12s on the clock
+    actDeadline: Date.now() + 30000,
+    actMs: 30000, // relative remaining (clients anchor to their own clock)
     dealerSeat: 3,
     sbSeat: 0,
     bbSeat: 1,

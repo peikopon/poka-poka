@@ -582,6 +582,9 @@ class Room {
         activeSeat: this.hand.activeSeat,
         activePlayerId: activeId,
         actDeadline: this.actDeadline,
+        // Remaining ms at send time. Clients count down from THIS (relative) so
+        // a device clock that differs from the server's doesn't skew the timer.
+        actMs: this.actDeadline ? Math.max(0, this.actDeadline - Date.now()) : null,
         dealerSeat: this.dealerSeat,
         sbSeat: this.hand.sbSeat,
         bbSeat: this.hand.bbSeat,

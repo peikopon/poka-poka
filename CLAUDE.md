@@ -23,8 +23,7 @@ sound, card animations, and a hand-rankings guide. What exists:
   `sound.js` (synthesized SFX), serverless fixtures `/index.html?mock=lobby|turn|showdown|handover`.
 - `assets/icons/` — the icon set, served at `/assets` and **inlined** into the page
   at boot (so gradient `<use>` fills resolve on iOS Safari).
-- `package.json`, `render.yaml`, `.gitignore`.
-- `Poker Web App Design/` — original mockups (reference only).
+- `package.json`, `render.yaml`, `.gitignore`, `README.md`.
 
 Run locally: `npm install` then `npm run dev` (or `npm start`), open
 `http://localhost:3000` in several windows / phones on the LAN.
@@ -123,8 +122,8 @@ poka-poka/
 │   ├── app.js            # WS client, state store, render loop, action senders
 │   └── assets/icons/...  # (symlink or copy of the icon sprite — see below)
 ├── assets/icons/         # Source icon set (already built)
-├── Poker Web App Design/ # Mockups (reference only)
 ├── package.json
+├── README.md
 └── CLAUDE.md
 ```
 
@@ -219,11 +218,10 @@ Rules of thumb:
 
 ## Host-configurable table settings
 
-These come straight from the **Host — game rules** screen
-(`Poker Web App Design/Poka-Poka.dc.html`, panel 2). The config UI and the engine
+These come from the **Host — game rules** screen. The config UI and the engine
 must agree on these exact options:
 
-| Setting | Options | Default (highlighted in mockup) |
+| Setting | Options | Default |
 |---------|---------|----------|
 | Game | Texas Hold'em | (only mode) |
 | Starting stack | 500 / 1,000 / **2,500** / 5,000 | 2,500 |
@@ -279,7 +277,7 @@ The app chrome uses the **Poka-Poka "Playful"** style (variant C). Phone is used
 | Felt | `#E7DECB` (rim `#DCD1BB`) | The poker table oval. |
 | Phone frame | `#16110e` | Mockup device bezel. |
 
-**Player-token colors (mockup):** `#E2613C`, `#2C9C8F`, `#D69A2E`, `#5B6CC4`,
+**Player-token colors:** `#E2613C`, `#2C9C8F`, `#D69A2E`, `#5B6CC4`,
 `#C85C8E`, `#4F9D5B`, `#6B7785`, `#8A5BB0`.
 
 **Fonts (Google Fonts):**
@@ -359,7 +357,4 @@ needed, the room `Map` is the seam to back with Redis — keep it isolated in `r
 - **One sprite.** All icons via `<use href=".../poker-icons.svg#id">`. Don't inline
   copies or fork the sprite.
 - **No build step on the front-end.** Plain HTML/CSS/JS in `public/`.
-- **Mockups are reference, not runtime.** `Poker Web App Design/*.dc.html` use a
-  proprietary `support.js` canvas; don't import them. Re-implement the same look in
-  `public/` with the design tokens above.
 - **Mobile landscape first.** Layouts target a phone held sideways.

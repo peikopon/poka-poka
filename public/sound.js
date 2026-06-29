@@ -85,6 +85,13 @@ export function createSound() {
     allin:  () => { tone({ freq: 440, dur: 0.16, type: 'sawtooth', gain: 0.24, slideTo: 880 }); tone({ freq: 660, dur: 0.18, type: 'square', gain: 0.14, delay: 0.06 }); },
     turn:   () => { tone({ freq: 660, dur: 0.1, type: 'sine', gain: 0.22 }); tone({ freq: 990, dur: 0.12, type: 'sine', gain: 0.16, delay: 0.09 }); },
     win:    () => { [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, dur: 0.18, type: 'triangle', gain: 0.22, delay: i * 0.1 })); },
+    // Triumphant end-of-game fanfare for the winner/results screen.
+    congrats: () => {
+      const melody = [523, 659, 784, 1047, 784, 1047, 1319]; // C E G C G C E(hi)
+      melody.forEach((f, i) => tone({ freq: f, dur: 0.16, type: 'triangle', gain: 0.24, delay: i * 0.12 }));
+      // final chord
+      [784, 1047, 1319].forEach((f) => tone({ freq: f, dur: 0.5, type: 'triangle', gain: 0.18, delay: melody.length * 0.12 }));
+    },
     chip:   () => noise({ dur: 0.12, gain: 0.2, hp: 2600 }),
     // Turn-clock ticks: a soft tock each second, a sharp urgent tick in the
     // final seconds.
