@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Poka-Poka app icon</title>
+  <desc id="desc">A poker chip with a spade — the Poka-Poka mark.</desc>
+  <defs>
+    <linearGradient id="ai-bg" x1="8" x2="56" y1="6" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7cf4c7"/>
+      <stop offset="1" stop-color="#159b88"/>
+    </linearGradient>
+    <linearGradient id="ai-chip" x1="12" x2="52" y1="10" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff7890"/>
+      <stop offset="1" stop-color="#d92f55"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#ai-bg)"/>
+  <ellipse cx="32" cy="19" rx="24" ry="12" fill="#fffaf0" opacity=".12"/>
+  <circle cx="32" cy="33" r="23" fill="url(#ai-chip)" stroke="#263238" stroke-width="3"/>
+  <circle cx="32" cy="33" r="23" fill="none" stroke="#fffaf0" stroke-width="5.2" stroke-dasharray="7.3 10.75"/>
+  <circle cx="32" cy="33" r="15" fill="#fff3d9" stroke="#263238" stroke-width="2.6"/>
+  <path fill="#263238" d="M32 22c-5.7 7.2-12.4 9.3-12.4 16 0 3.6 2.6 6.2 6.2 6.2 2.1 0 3.4-.9 4.1-2.3-.4 2.6-1.9 4.7-3.6 5.9h11.4c-1.8-1.2-3.2-3.3-3.6-5.9.7 1.4 2 2.3 4.1 2.3 3.6 0 6.2-2.6 6.2-6.2 0-6.7-6.7-8.8-12.4-16Z"/>
+</svg>

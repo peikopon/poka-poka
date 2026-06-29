@@ -1,0 +1,110 @@
+{
+  "sprite": "poker-icons.svg",
+  "viewBox": "0 0 64 64",
+  "palette": {
+    "ink": "#263238",
+    "feltMint": "#42d6a4",
+    "chipRed": "#ff4f6d",
+    "sunGold": "#ffd166",
+    "tableSky": "#5ecbff",
+    "buttonViolet": "#9b7bff",
+    "accentOrange": "#ff9f43",
+    "cardCream": "#fff3d9",
+    "cardWhite": "#fffaf0"
+  },
+  "icons": {
+    "suits": [
+      "suit-spade",
+      "suit-heart",
+      "suit-diamond",
+      "suit-club"
+    ],
+    "avatars": [
+      "avatar-01",
+      "avatar-02",
+      "avatar-03",
+      "avatar-04",
+      "avatar-05",
+      "avatar-06",
+      "avatar-07",
+      "avatar-08",
+      "avatar-09"
+    ],
+    "actions": [
+      "action-fold",
+      "action-check",
+      "action-call",
+      "action-raise-bet",
+      "action-all-in"
+    ],
+    "cards": [
+      "card-blank",
+      "card-back",
+      "hole-cards",
+      "deck",
+      "shuffle"
+    ],
+    "positions": [
+      "dealer-button",
+      "blind-small",
+      "blind-big"
+    ],
+    "economy": [
+      "pot-chips",
+      "chip-stack",
+      "wallet",
+      "buy-in",
+      "cash-out"
+    ],
+    "social": [
+      "chat-bubble",
+      "emoji-reaction",
+      "invite-friend",
+      "profile-user",
+      "leaderboard",
+      "hand-history"
+    ],
+    "navigation": [
+      "settings",
+      "home",
+      "search",
+      "notification-bell",
+      "info",
+      "close",
+      "menu",
+      "back-arrow"
+    ],
+    "chips": [
+      "poker-chip",
+      "chip-small",
+      "chip-medium",
+      "chip-large",
+      "chip-1",
+      "chip-5",
+      "chip-10",
+      "chip-25",
+      "chip-50",
+      "chip-100",
+      "chip-500"
+    ],
+    "lobby": [
+      "host-crown",
+      "dealer-button",
+      "copy-code",
+      "start-game",
+      "kick-player",
+      "ready-status",
+      "waiting-status"
+    ],
+    "state": [
+      "timer-turn-clock",
+      "winner-trophy",
+      "connection",
+      "sound-on",
+      "sound-off"
+    ],
+    "brand": [
+      "app-logo-mark"
+    ]
+  }
+}

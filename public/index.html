@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FBF6EE" />
+  <!-- Fullscreen / installable on phones (Add to Home Screen hides browser chrome) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Poka-Poka" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/app-icon.svg" />
+  <title>Poka-Poka</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Inlined icon sprite (filled at boot) so gradient fills resolve on all browsers -->
+  <div id="sprite-host" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></div>
+
+  <!-- Rotate hint for portrait phones -->
+  <div id="rotate-hint" class="rotate-hint" aria-hidden="true">
+    <div class="rotate-hint__card">
+      <div class="rotate-hint__icon">↻</div>
+      <div class="rotate-hint__title">Turn your phone sideways</div>
+      <div class="rotate-hint__sub">Poka-Poka plays best in landscape.</div>
+    </div>
+  </div>
+
+  <!-- Connection status pill (top-right, global) -->
+  <div id="conn-pill" class="conn-pill conn-pill--online" aria-live="polite">
+    <svg class="conn-pill__icon" width="14" height="14" aria-hidden="true"><use href="#connection"></use></svg>
+    <span id="conn-pill-text">Online</span>
+  </div>
+
+  <main id="app" class="app">
+
+    <!-- ════════════════ 1 · HOME ════════════════ -->
+    <section class="screen screen--home is-active" data-screen="home">
+      <div class="home">
+        <div class="home__brand">
+          <div class="home__suits" aria-hidden="true">
+            <svg><use href="#suit-heart"></use></svg>
+            <svg><use href="#suit-spade"></use></svg>
+            <svg><use href="#suit-diamond"></use></svg>
+            <svg><use href="#suit-club"></use></svg>
+          </div>
+          <div class="home__lockup">
+            <h1 class="wordmark">Poka-<br />Poka</h1>
+            <span class="home__logo" aria-hidden="true"><svg><use href="#app-logo-mark"></use></svg></span>
+          </div>
+          <button class="btn btn--accent btn--lg" id="home-host">Host a table</button>
+        </div>
+
+        <div class="home__join card">
+          <div class="card__title">Join with a code</div>
+          <form id="home-join-form" class="code-entry code-entry--sm" autocomplete="off">
+            <input class="code-box" maxlength="1" inputmode="latin" aria-label="Code letter 1" />
+            <input class="code-box" maxlength="1" inputmode="latin" aria-label="Code letter 2" />
+            <input class="code-box" maxlength="1" inputmode="latin" aria-label="Code letter 3" />
+            <input class="code-box" maxlength="1" inputmode="latin" aria-label="Code letter 4" />
+            <button type="submit" class="visually-hidden">Join</button>
+          </form>
+          <button class="btn btn--ink" id="home-join-go">Join table</button>
+          <button class="linkbtn" id="home-spectate" type="button">
+            <svg width="14" height="14" aria-hidden="true"><use href="#profile-user"></use></svg>
+            Watch a table
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ 2 · HOST — GAME RULES ════════════════ -->
+    <section class="screen screen--rules" data-screen="rules">
+      <div class="rules">
+        <header class="rules__head">
+          <button class="iconbtn-back" data-nav="home" aria-label="Back"><svg width="16" height="16" aria-hidden="true"><use href="#back-arrow"></use></svg></button>
+          <h2 class="rules__title">New table</h2>
+          <span class="chip-tag chip-tag--accent">Texas Hold'em</span>
+        </header>
+
+        <div class="rules__grid">
+          <!-- Starting stack -->
+          <div class="setting" data-setting="startingStack">
+            <div class="setting__label"><span>Starting stack</span><button type="button" class="info-i" aria-label="About starting stack" data-tip="Chips every player starts the game with."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="seg seg--quad" role="radiogroup" aria-label="Starting stack"></div>
+          </div>
+
+          <!-- Starting blinds + mode -->
+          <div class="setting" data-setting="blinds">
+            <div class="setting__label"><span>Starting blinds</span><button type="button" class="info-i" aria-label="About starting blinds" data-tip="Forced bets that open each hand (small / big). Increasing raises them on a timer; Fixed keeps them constant."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="seg seg--quad seg--sm" role="radiogroup" aria-label="Starting blinds"></div>
+            <div class="seg seg--pill" data-setting="blindsMode" role="radiogroup" aria-label="Blinds mode"></div>
+          </div>
+
+          <!-- Max seats -->
+          <div class="setting" data-setting="maxSeats">
+            <div class="setting__label"><span>Max seats</span><button type="button" class="info-i" aria-label="About max seats" data-tip="Most players allowed at the table (2–8)."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="stepper">
+              <div class="stepper__value">
+                <span id="seats-value" class="stepper__num">8</span>
+                <span class="stepper__unit">players</span>
+              </div>
+              <div class="stepper__btns">
+                <button class="stepper__btn" id="seats-minus" aria-label="Fewer seats">−</button>
+                <button class="stepper__btn" id="seats-plus" aria-label="More seats">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Betting -->
+          <div class="setting" data-setting="betting">
+            <div class="setting__label"><span>Betting</span><button type="button" class="info-i" aria-label="About betting" data-tip="No-Limit lets you bet any amount up to your whole stack. Pot &amp; Fixed limit coming soon."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="seg seg--pill seg--tri" role="radiogroup" aria-label="Betting mode">
+              <button type="button" class="seg__opt is-on" data-value="no-limit">No-Limit</button>
+              <button type="button" class="seg__opt is-disabled" disabled data-value="pot">Pot<small>soon</small></button>
+              <button type="button" class="seg__opt is-disabled" disabled data-value="fixed">Fixed<small>soon</small></button>
+            </div>
+          </div>
+
+          <!-- Turn timer -->
+          <div class="setting" data-setting="turnTimer">
+            <div class="setting__label"><span>Turn timer</span><button type="button" class="info-i" aria-label="About turn timer" data-tip="Seconds each player has to act before an auto check/fold. Off = no clock."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="seg seg--quad" role="radiogroup" aria-label="Turn timer"></div>
+          </div>
+
+          <!-- Win condition -->
+          <div class="setting" data-setting="winCondition">
+            <div class="setting__label"><span>Win condition</span><button type="button" class="info-i" aria-label="About win condition" data-tip="Last chips: play until one player has every chip. Host ends: the host can stop the game anytime."><svg aria-hidden="true"><use href="#info"></use></svg></button></div>
+            <div class="seg seg--pill" role="radiogroup" aria-label="Win condition"></div>
+          </div>
+        </div>
+
+        <button class="btn btn--accent btn--wide" id="rules-create">
+          <svg width="18" height="18" aria-hidden="true"><use href="#start-game"></use></svg>
+          Create table
+        </button>
+      </div>
+    </section>
+
+    <!-- ════════════════ 3 · JOIN — ENTER CODE ════════════════ -->
+    <section class="screen screen--join" data-screen="join">
+      <div class="join">
+        <div class="join__left">
+          <button class="iconbtn-back" data-nav="home" aria-label="Back"><svg width="16" height="16" aria-hidden="true"><use href="#back-arrow"></use></svg></button>
+          <h2 class="join__title">Got a table<br />code?</h2>
+          <p class="join__sub">Ask your host for the 4-letter code, then drop it in.</p>
+        </div>
+        <div class="join__right">
+          <div class="field-label">Room code</div>
+          <form id="join-form" class="code-entry code-entry--lg" autocomplete="off">
+            <input class="code-box" maxlength="1" aria-label="Code letter 1" />
+            <input class="code-box" maxlength="1" aria-label="Code letter 2" />
+            <input class="code-box" maxlength="1" aria-label="Code letter 3" />
+            <input class="code-box" maxlength="1" aria-label="Code letter 4" />
+            <button type="submit" class="visually-hidden">Continue</button>
+          </form>
+          <button class="btn btn--accent btn--wide" id="join-continue">Continue →</button>
+          <button class="linkbtn" id="join-spectate" type="button">
+            <svg width="14" height="14" aria-hidden="true"><use href="#profile-user"></use></svg>
+            Watch as spectator
+          </button>
+          <p class="form-error" id="join-error" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ 4 · IDENTITY ════════════════ -->
+    <section class="screen screen--identity" data-screen="identity">
+      <div class="identity">
+        <div class="identity__left">
+          <div class="identity__head">
+            <button class="iconbtn-back" id="identity-back" aria-label="Back"><svg width="16" height="16" aria-hidden="true"><use href="#back-arrow"></use></svg></button>
+            <span class="identity__context" id="identity-context">New table</span>
+          </div>
+          <h2 class="identity__title">Who's playing?</h2>
+          <label class="field-label" for="name-input">Display name</label>
+          <input id="name-input" class="text-input" type="text" maxlength="16" placeholder="Your name" />
+          <p class="hint">Keep it friendly — names are filtered.</p>
+          <button class="btn btn--accent btn--wide" id="identity-ready">I'm ready →</button>
+          <p class="form-error" id="identity-error" hidden></p>
+        </div>
+        <div class="identity__right">
+          <div class="field-label">Pick your avatar</div>
+          <div class="token-grid" id="token-grid" role="radiogroup" aria-label="Pick your avatar"></div>
+          <div class="token-preview" id="token-preview" hidden>
+            <span class="seat-avatar seat-avatar--md" id="preview-avatar"></span>
+            <div>
+              <div class="token-preview__name" id="preview-name">—</div>
+              <div class="token-preview__sub">your avatar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ 5 · LOBBY ════════════════ -->
+    <section class="screen screen--lobby" data-screen="lobby">
+      <div class="lobby">
+        <aside class="lobby__side">
+          <div class="field-label">Room code · tap to copy</div>
+          <button class="roomcode" id="lobby-code-copy" aria-label="Copy room code">
+            <span class="roomcode__text" id="lobby-code">----</span>
+            <svg class="roomcode__icon" width="20" height="20" aria-hidden="true"><use href="#copy-code"></use></svg>
+          </button>
+          <div class="tags" id="lobby-tags"></div>
+          <div class="lobby__watch" id="lobby-watch">👁 0 watching</div>
+          <button class="btn btn--accent btn--wide" id="lobby-start">
+            <svg width="18" height="18" aria-hidden="true"><use href="#start-game"></use></svg>
+            Start game
+          </button>
+          <button class="btn btn--ghost btn--ready" id="lobby-ready">I'm ready</button>
+          <p class="lobby__role" id="lobby-role">You're in the lobby</p>
+          <button class="linkbtn linkbtn--leave" id="lobby-leave" type="button">
+            <svg width="14" height="14" aria-hidden="true"><use href="#back-arrow"></use></svg>
+            <span id="lobby-leave-text">Leave table</span>
+          </button>
+        </aside>
+        <div class="lobby__main">
+          <div class="lobby__main-head">
+            <span class="field-label">Players</span>
+            <span class="lobby__count" id="lobby-count">0 / 8</span>
+          </div>
+          <div class="player-grid" id="lobby-players"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ 6 · TABLE ════════════════ -->
+    <section class="screen screen--table" data-screen="table">
+      <div class="table">
+        <!-- top bar -->
+        <header class="table__top">
+          <div class="table__top-left">
+            <button class="info-pill info-pill--btn info-pill--code" id="table-code" aria-label="Copy room code">
+              <svg width="13" height="13" aria-hidden="true"><use href="#copy-code"></use></svg>
+              <span id="table-code-text">----</span>
+            </button>
+            <span class="info-pill" id="hand-pill">Hand —</span>
+            <span class="info-pill" id="blinds-pill">Blinds —</span>
+          </div>
+          <div class="table__top-right">
+            <button class="info-pill info-pill--btn" id="open-help" aria-label="Hand rankings">
+              <svg width="14" height="14" aria-hidden="true"><use href="#info"></use></svg>
+            </button>
+            <button class="info-pill info-pill--btn" id="sound-btn" aria-label="Toggle sound">
+              <svg width="15" height="15" aria-hidden="true"><use href="#sound-on"></use></svg>
+            </button>
+            <button class="info-pill info-pill--btn" id="fullscreen-btn" aria-label="Enter fullscreen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+            </button>
+            <button class="info-pill info-pill--btn" id="open-chat" aria-label="Chat">
+              <svg width="14" height="14" aria-hidden="true"><use href="#chat-bubble"></use></svg>
+              Chat
+              <span class="notif-dot" id="chat-dot" hidden></span>
+            </button>
+            <button class="info-pill info-pill--btn" id="open-emotes" aria-label="React">
+              <svg width="14" height="14" aria-hidden="true"><use href="#emoji-reaction"></use></svg>
+              React
+            </button>
+            <button class="info-pill info-pill--btn" id="open-log" aria-label="Log">
+              <svg width="14" height="14" aria-hidden="true"><use href="#hand-history"></use></svg>
+              Log
+            </button>
+            <button class="info-pill info-pill--btn info-pill--danger" id="table-finish" aria-label="Finish game" hidden>
+              <svg width="14" height="14" aria-hidden="true"><use href="#winner-trophy"></use></svg>
+              Finish
+            </button>
+            <button class="info-pill info-pill--btn" id="table-leave" aria-label="Leave table"><svg width="15" height="15" aria-hidden="true"><use href="#home"></use></svg></button>
+          </div>
+        </header>
+
+        <!-- felt + dynamic seats/board -->
+        <div class="felt-wrap">
+          <div class="felt"></div>
+          <div class="pot-pill" id="pot-pill">
+            <svg class="pot-pill__chip" aria-hidden="true"><use href="#poker-chip"></use></svg>
+            <span id="pot-amount">Pot 0</span>
+          </div>
+          <div class="board" id="board"></div>
+          <div class="seats" id="seats"></div>
+        </div>
+
+        <!-- your hole cards + seat plate -->
+        <div class="you-zone" id="you-zone"></div>
+
+        <!-- ════ REDESIGNED ACTION BAR ════ -->
+        <div class="actionbar" id="actionbar">
+          <!-- Your turn timer (top-right of the bar) -->
+          <div class="ab-timer" id="ab-timer" hidden>
+            <svg width="13" height="13" aria-hidden="true"><use href="#timer-turn-clock"></use></svg>
+            <span id="ab-timer-text">--</span>
+          </div>
+
+          <!-- Waiting state (shown when not your turn) -->
+          <div class="actionbar__waiting" id="ab-waiting" hidden>
+            <span class="actionbar__waiting-dot"></span>
+            <span id="ab-waiting-text">Waiting…</span>
+          </div>
+
+          <!-- Sizing zone (shown only when legal.canRaise) -->
+          <div class="sizing" id="ab-sizing" hidden>
+            <div class="sizing__ctx">
+              <span class="sizing__ctx-item" id="ab-tocall">To call 0</span>
+              <span class="sizing__ctx-item" id="ab-pot">Pot 0</span>
+            </div>
+            <div class="sizing__row">
+              <div class="presets" id="ab-presets">
+                <button class="preset" data-preset="min">Min</button>
+                <button class="preset" data-preset="2x">2&times;</button>
+                <button class="preset" data-preset="3x">3&times;</button>
+                <button class="preset" data-preset="half">&frac12; Pot</button>
+                <button class="preset" data-preset="pot">Pot</button>
+                <button class="preset" data-preset="allin">All-in</button>
+              </div>
+              <div class="readout">
+                <button class="readout__step" id="ab-minus" aria-label="Decrease bet">−</button>
+                <div class="readout__num">
+                  <span class="readout__label">to</span>
+                  <span class="readout__value" id="ab-amount">0</span>
+                </div>
+                <button class="readout__step" id="ab-plus" aria-label="Increase bet">+</button>
+              </div>
+            </div>
+            <input
+              type="range" class="slider" id="ab-slider"
+              min="0" max="100" value="0" step="1"
+              aria-label="Raise amount"
+            />
+          </div>
+
+          <!-- Action zone -->
+          <div class="actions" id="ab-actions">
+            <button class="abtn abtn--fold" id="ab-fold">
+              <svg width="18" height="18" aria-hidden="true"><use href="#action-fold"></use></svg>
+              Fold
+            </button>
+            <button class="abtn abtn--check" id="ab-check">Check</button>
+            <button class="abtn abtn--raise" id="ab-raise">Bet</button>
+          </div>
+        </div>
+
+        <!-- Spectator footer (replaces action bar in spectator mode) -->
+        <div class="spectate-foot" id="spectate-foot" hidden>
+          <span class="spectate-foot__dot"></span>
+          <span id="spectate-foot-text">You're spectating</span>
+        </div>
+
+        <!-- Showdown / hand-over winner banner -->
+        <div class="showdown" id="showdown-banner" hidden>
+          <div class="showdown__card">
+            <div class="showdown__kicker">
+              <svg width="16" height="16" aria-hidden="true"><use href="#winner-trophy"></use></svg>
+              <span id="showdown-kicker-text">Winner</span>
+            </div>
+            <div class="showdown__name" id="showdown-name">—</div>
+            <div class="showdown__hand" id="showdown-hand"></div>
+            <div class="showdown__amount" id="showdown-amount" hidden>
+              <svg width="16" height="16" aria-hidden="true"><use href="#poker-chip"></use></svg>
+              <span id="showdown-amount-text">0</span>
+            </div>
+            <div class="showdown__cards" id="showdown-cards"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ CHAT DRAWER ════ -->
+      <aside class="drawer drawer--chat" id="chat-drawer" hidden>
+        <div class="drawer__head">
+          <span class="drawer__title">Chat</span>
+          <button class="iconbtn-close" data-close="chat-drawer" aria-label="Close chat">×</button>
+        </div>
+        <div class="drawer__body" id="chat-messages"></div>
+        <form class="chat-compose" id="chat-form" autocomplete="off">
+          <input class="chat-compose__input" id="chat-input" type="text" maxlength="120" placeholder="Message…" />
+          <button class="chat-compose__send" type="submit" aria-label="Send">↑</button>
+        </form>
+      </aside>
+
+      <!-- ════ EMOTE WHEEL ════ -->
+      <div class="emote-wheel" id="emote-wheel" hidden>
+        <div class="emote-wheel__panel" id="emote-list"></div>
+      </div>
+
+      <!-- ════ HAND LOG DRAWER ════ -->
+      <aside class="drawer drawer--log" id="log-drawer" hidden>
+        <div class="drawer__head">
+          <span class="drawer__title" id="log-title">Hand log</span>
+          <button class="iconbtn-close" data-close="log-drawer" aria-label="Close log">×</button>
+        </div>
+        <div class="drawer__body" id="log-body"></div>
+      </aside>
+
+      <!-- ════ HAND-RANKINGS HELP DRAWER ════ -->
+      <aside class="drawer drawer--help" id="help-drawer" hidden>
+        <div class="drawer__head">
+          <span class="drawer__title">Hand rankings</span>
+          <button class="iconbtn-close" data-close="help-drawer" aria-label="Close help">×</button>
+        </div>
+        <div class="drawer__body" id="help-body"></div>
+      </aside>
+
+      <!-- floating emote bubbles -->
+      <div class="emote-floats" id="emote-floats" aria-hidden="true"></div>
+    </section>
+
+    <!-- ════════════════ 7 · RESULTS ════════════════ -->
+    <section class="screen screen--results" data-screen="results">
+      <div class="results">
+        <div class="results__left">
+          <div class="results__suits" aria-hidden="true">
+            <span class="suit suit--red">♥</span><span class="suit suit--light">♠</span><span class="suit suit--red">♦</span><span class="suit suit--light">♣</span>
+          </div>
+          <div class="results__kicker">
+            <svg width="16" height="16" aria-hidden="true"><use href="#winner-trophy"></use></svg>
+            Winner
+          </div>
+          <h2 class="results__name" id="results-name">—</h2>
+          <p class="results__hand" id="results-hand">takes the pot</p>
+          <div class="results__cards" id="results-cards"></div>
+        </div>
+        <div class="results__right">
+          <div class="results__standings-label">Final standings</div>
+          <div class="standings" id="results-standings"></div>
+          <div class="results__btns">
+            <button class="btn btn--accent" id="results-again">Play again</button>
+            <button class="btn btn--dark-icon" id="results-home" aria-label="Home"><svg width="22" height="22" aria-hidden="true"><use href="#home"></use></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════ Toast (copy feedback, errors) ════ -->
+    <div class="toast" id="toast" hidden></div>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
