@@ -581,13 +581,14 @@ function wireEvents() {
 }
 
 function wireFullscreen() {
-  const btn = document.getElementById('fullscreen-btn');
-  if (!btn) return;
+  const btns = Array.from(document.querySelectorAll('.js-fullscreen'));
+  if (!btns.length) return;
   const docEl = document.documentElement;
   const isFs = () => document.fullscreenElement || document.webkitFullscreenElement;
-  const sync = () => btn.setAttribute('aria-label', isFs() ? 'Exit fullscreen' : 'Enter fullscreen');
+  const sync = () => btns.forEach((b) =>
+    b.setAttribute('aria-label', isFs() ? 'Exit fullscreen' : 'Enter fullscreen'));
 
-  btn.addEventListener('click', async () => {
+  const onClick = async () => {
     try {
       if (!isFs()) {
         if (docEl.requestFullscreen) await docEl.requestFullscreen();
@@ -596,7 +597,9 @@ function wireFullscreen() {
       } else if (document.exitFullscreen) await document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     } catch { toast('Fullscreen not available here'); }
-  });
+  };
+
+  btns.forEach((b) => b.addEventListener('click', onClick));
   document.addEventListener('fullscreenchange', sync);
   document.addEventListener('webkitfullscreenchange', sync);
 }

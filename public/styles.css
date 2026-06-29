@@ -697,7 +697,7 @@ html, body {
 }
 
 .conn-pill {
-  position: fixed; top: 8px; right: 10px; z-index: 40;
+  position: fixed; top: 8px; right: 46px; z-index: 40;
   display: inline-flex; align-items: center; gap: 5px;
   font: 600 10px var(--f-num); padding: 4px 9px; border-radius: 8px;
   background: #fff; border: 1px solid var(--border); color: var(--muted);
@@ -708,6 +708,19 @@ html, body {
 .conn-pill--offline { color: var(--accent); }
 /* hide the global conn pill while on the table (it has its own chrome) */
 .on-table .conn-pill { display: none; }
+
+/* Global fullscreen / install button — top-right, on every screen but the table */
+.global-fs {
+  position: fixed; top: 6px; right: 10px; z-index: 41;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 26px; padding: 0; border-radius: 8px;
+  background: #fff; border: 1px solid var(--border); color: var(--ink);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.global-fs:hover { border-color: var(--accent); color: var(--accent); }
+.global-fs:active { transform: scale(.94); }
+/* the table has its own fullscreen control in its top bar */
+.on-table .global-fs { display: none; }
 
 
 .rotate-hint {

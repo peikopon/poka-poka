@@ -41,6 +41,11 @@
     <span id="conn-pill-text">Online</span>
   </div>
 
+  <!-- Global fullscreen / install button (top-right; hidden on the table, which has its own) -->
+  <button id="global-fullscreen" class="global-fs js-fullscreen" aria-label="Enter fullscreen" title="Fullscreen">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+  </button>
+
   <main id="app" class="app">
 
     <!-- ════════════════ 1 · HOME ════════════════ -->
@@ -255,7 +260,7 @@
             <button class="info-pill info-pill--btn" id="sound-btn" aria-label="Toggle sound">
               <svg width="15" height="15" aria-hidden="true"><use href="#sound-on"></use></svg>
             </button>
-            <button class="info-pill info-pill--btn" id="fullscreen-btn" aria-label="Enter fullscreen">
+            <button class="info-pill info-pill--btn js-fullscreen" id="fullscreen-btn" aria-label="Enter fullscreen">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
             </button>
             <button class="info-pill info-pill--btn" id="open-chat" aria-label="Chat">
