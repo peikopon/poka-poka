@@ -211,9 +211,10 @@ Rules of thumb:
   next hand deals. Adjust game tempo by editing these two numbers.
 - **Action sounds table-wide:** every applied action is broadcast in the snapshot
   as `hand.lastAction = { seq, playerId, action }` (a call/raise that empties the
-  stack is normalized to `allin`). Clients diff `seq` and play the action's TTS
-  voice clip (`public/voice/*.wav`; per-player pitch derived from the avatar
-  token in `app.js` `VOICE_RATES`) on EVERY device, plus a dramatic all-in SFX.
+  stack is normalized to `allin`). Clients diff `seq` and play the character's
+  recorded voice clip (`public/voice_pack/<fruit>-<word>.mp3`, one per avatar per
+  action; token→fruit map in `sound.js` `TOKEN_FRUIT`) on EVERY device, plus a
+  dramatic all-in SFX. Review page: `/voice-test.html` (dev tool, not linked).
 - **Final ranking:** when a player ends a hand at 0 chips, `player.bustedHand`
   records the hand number; results rank 0-chip players by it — busting first =
   last place.

@@ -57,15 +57,9 @@ let prevPhase = null;      // to detect hand-over / game transitions
 let actDeadlineLocal = null; // turn deadline anchored to THIS device's clock
 let prevActionSeq = 0;     // last hand.lastAction.seq we played a sound for
 
-// Every player gets a distinct "voice": the same base TTS clip played at a
-// deterministic rate (pitch+speed) derived from their avatar token, so a given
-// player sounds identical on every device.
-const VOICE_RATES = {
-  'avatar-01': 1.0, 'avatar-02': 0.85, 'avatar-03': 1.14,
-  'avatar-04': 0.78, 'avatar-05': 1.26, 'avatar-06': 0.92,
-  'avatar-07': 1.07, 'avatar-08': 0.72, 'avatar-09': 1.2,
-};
-const voiceRateFor = (token) => VOICE_RATES[token] || 1;
+// Every character has its own recorded voice: public/voice_pack/<fruit>-<word>.mp3
+// (sound.js maps the avatar token to the fruit). Same player = same voice on
+// every device.
 const VOICE_ACTIONS = ['check', 'call', 'raise', 'allin'];
 
 // pre-game (pre-state) flow scratch
@@ -298,7 +292,7 @@ function detectTransitions(s) {
   if (la && state && la.seq !== prevActionSeq) {
     const actor = s?.players?.find((p) => p.id === la.playerId);
     if (la.action === 'allin') sound.play('allin'); // dramatic hit for the whole table
-    if (VOICE_ACTIONS.includes(la.action)) sound.voice(la.action, voiceRateFor(actor?.token));
+    if (VOICE_ACTIONS.includes(la.action)) sound.voice(la.action, actor?.token);
     else if (la.action === 'fold') sound.play('fold');
   }
 
