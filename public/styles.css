@@ -604,9 +604,11 @@ html, body {
 /* hand-history entries */
 .logent { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
 .logent--empty { color: var(--muted); font: 500 12px var(--f-body); text-align: center; }
-.logent__head { display: flex; align-items: baseline; gap: 8px; font: 600 11px var(--f-num); color: var(--ink); }
-.logent__head b { font: 700 12px var(--f-num); }
-.logent__head span { color: var(--muted); }
+/* Header pieces never break internally ("Hand 10" stays one unit); when the
+   row is tight a WHOLE piece (e.g. "· won uncontested") wraps to line 2. */
+.logent__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font: 600 11px var(--f-num); color: var(--ink); }
+.logent__head b { font: 700 12px var(--f-num); white-space: nowrap; }
+.logent__head span { color: var(--muted); white-space: nowrap; }
 .logent__win { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
 .logent__name { font: 700 12px var(--f-body); color: var(--ink); }
 .logent__amt { font: 700 12px var(--f-num); color: var(--good, #4F9D5B); }
