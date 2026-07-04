@@ -20,8 +20,8 @@ const CODE_LEN = 4;
 // ── Game pacing (developer-tunable) ─────────────────────────────────────────
 // These two constants control how much "breathing room" players get to read
 // what just happened. Adjust here (ms):
-const HAND_OVER_MS = 8000;      // winner banner: pause before the next hand deals
-const STREET_PAUSE_MS = 2000;   // pause after a betting round ends before the next street reveals
+const HAND_OVER_MS = 3000;      // winner banner: pause before the next hand deals
+const STREET_PAUSE_MS = 2000;   //  each community-card stage is called a "street": preflop → flop → turn → river. STREET_PAUSE_MS (2s) is the breather between those stages, whenever a betting round finishes:
 const OFFLINE_FALLBACK_MS = 30000; // turn clock for an offline player when the table has NO timer (Off)
 const DROP_GRACE_MS = Number(process.env.DROP_GRACE_MS) || 2 * 60 * 1000; // disconnect grace before a seat is eliminated
 
@@ -435,6 +435,10 @@ class Room {
     // Hand-history entry. `shownWinners` already respects the reveal rule:
     // on a fold-win it carries NO handName/bestCards, so the log shows only
     // the (public) table cards — the winner's hand stays secret.
+    // `net` = what the winner actually GAINED (payout minus the chips they
+    // themselves put into the pot) — that's what the log displays as "+".
+    const committedById = {};
+    for (const s of this.hand.seats) if (s) committedById[s.id] = s.committed;
     this.handLog.push({
       handNumber: this.handNumber,
       showdown: this.revealAll,
@@ -444,7 +448,8 @@ class Room {
         id: w.id,
         name: w.name,
         token: this.players.get(w.id)?.token ?? null,
-        amount: w.amount,
+        amount: w.amount,                                  // gross payout received
+        net: w.amount - (committedById[w.id] || 0),        // actual profit this hand
         handName: w.handName,
         bestCards: w.bestCards,
       })),

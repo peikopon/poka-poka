@@ -110,14 +110,14 @@ export const turnState = {
       showdown: false,
       board: ['Qh', '8s', '3d'],
       pot: 120,
-      winners: [{ id: 'p3', name: 'Jess', token: 'avatar-05', amount: 120, handName: null, bestCards: [] }],
+      winners: [{ id: 'p3', name: 'Jess', token: 'avatar-05', amount: 120, net: 75, handName: null, bestCards: [] }],
     },
     {
       handNumber: 11,
       showdown: true,
       board: ['Ah', 'Kd', '7s', '4c', '2d'],
       pot: 360,
-      winners: [{ id: 'p1', name: 'Mia', token: 'avatar-02', amount: 360, handName: 'Two Pair', bestCards: ['Ah', 'Ad', 'Kd', 'Kh', '7s'] }],
+      winners: [{ id: 'p1', name: 'Mia', token: 'avatar-02', amount: 360, net: 240, handName: 'Two Pair', bestCards: ['Ah', 'Ad', 'Kd', 'Kh', '7s'] }],
     },
   ],
 };

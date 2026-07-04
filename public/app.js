@@ -980,13 +980,19 @@ function renderLog() {
     return;
   }
   body.innerHTML = [...log].reverse().map((h) => {
-    const winners = (h.winners || []).map((w) => `
+    const winners = (h.winners || []).map((w) => {
+      // "+" is the winner's PROFIT (payout minus their own chips in the pot),
+      // not the pot size — the pot is already shown in the header.
+      const net = w.net ?? w.amount;
+      const amt = net >= 0 ? `+${fmt(net)}` : `−${fmt(-net)}`;
+      return `
       <div class="logent__win">
         ${w.token ? avatarHtml(w.token, 'sm') : ''}
         <span class="logent__name">${escapeHtml(w.name)}</span>
-        <span class="logent__amt">+${fmt(w.amount)}</span>
+        <span class="logent__amt${net < 0 ? ' logent__amt--neg' : ''}">${amt}</span>
         ${w.handName ? `<span class="logent__hand">${escapeHtml(w.handName)}</span>` : ''}
-      </div>`).join('');
+      </div>`;
+    }).join('');
     // Showdown → the winning 5 cards. Fold-win → just the community cards.
     const cards = h.showdown && h.winners?.[0]?.bestCards?.length
       ? `<div class="logent__cards">${h.winners[0].bestCards.map(cardMiniHtml).join('')}</div>`

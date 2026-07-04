@@ -610,6 +610,7 @@ html, body {
 .logent__win { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
 .logent__name { font: 700 12px var(--f-body); color: var(--ink); }
 .logent__amt { font: 700 12px var(--f-num); color: var(--good, #4F9D5B); }
+.logent__amt--neg { color: var(--accent); }
 .logent__hand { font: 600 10px var(--f-num); color: var(--accent); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
 .logent__cards { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
 .logent__cap { font: 600 10px var(--f-num); color: var(--muted); margin-right: 3px; }
