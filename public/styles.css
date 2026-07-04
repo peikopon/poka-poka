@@ -601,6 +601,19 @@ html, body {
 .drawer__title { font: 700 14px var(--f-head); color: var(--ink); }
 .drawer__body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 
+/* hand-history entries */
+.logent { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+.logent--empty { color: var(--muted); font: 500 12px var(--f-body); text-align: center; }
+.logent__head { display: flex; align-items: baseline; gap: 8px; font: 600 11px var(--f-num); color: var(--ink); }
+.logent__head b { font: 700 12px var(--f-num); }
+.logent__head span { color: var(--muted); }
+.logent__win { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.logent__name { font: 700 12px var(--f-body); color: var(--ink); }
+.logent__amt { font: 700 12px var(--f-num); color: var(--good, #4F9D5B); }
+.logent__hand { font: 600 10px var(--f-num); color: var(--accent); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+.logent__cards { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
+.logent__cap { font: 600 10px var(--f-num); color: var(--muted); margin-right: 3px; }
+
 /* chat messages */
 .chat-msg { display: flex; flex-direction: column; animation: fan-in 0.2s ease; }
 .chat-msg--me { align-items: flex-end; }

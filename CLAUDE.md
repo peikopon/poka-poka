@@ -53,8 +53,13 @@ Run locally: `npm install` then `npm run dev` (or `npm start`), open
 **Caching:** the server sends `Cache-Control: no-store` for all static files (no build
 hashing), so edits always show on a normal reload — important for phones / Add-to-Home-Screen.
 
-**Deferred (per plan):** hand-history log panel content; Pot-Limit & Fixed-Limit
-betting modes; persistence/DB. The room `Map` in `rooms.js` is the seam for Redis.
+**Hand log:** the Log drawer lists every finished hand (server keeps the last 30
+in `room.handLog`, broadcast as `ClientState.log`): winner(s) + amount + pot, and
+at a true showdown the hand name + winning 5 cards. **Fold-wins show only the
+community cards** — same secrecy rule as the live reveal.
+
+**Deferred (per plan):** Pot-Limit & Fixed-Limit betting modes; persistence/DB.
+The room `Map` in `rooms.js` is the seam for Redis.
 
 ---
 

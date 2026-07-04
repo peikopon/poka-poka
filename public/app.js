@@ -888,6 +888,9 @@ function renderTable() {
   // winner banner during the hand-over reveal
   renderShowdown();
 
+  // hand-history drawer content
+  renderLog();
+
   // action bar vs spectator footer
   const spectating = !!you.isSpectator;
   document.getElementById('actionbar').hidden = spectating;
@@ -965,6 +968,42 @@ function renderBoard(board) {
       el.appendChild(cardBackEl());
     }
   }
+}
+
+// Hand-history drawer: one entry per finished hand, newest first. The server
+// only ever sends public info here — on a fold-win the entry has no handName
+// or bestCards, so we show just the table cards and keep the winner's hand
+// secret (same reveal rule as the live table).
+function renderLog() {
+  const body = document.getElementById('log-body');
+  if (!body) return;
+  const log = state?.log || [];
+  if (!log.length) {
+    body.innerHTML = '<div class="logent logent--empty">No hands finished yet.</div>';
+    return;
+  }
+  body.innerHTML = [...log].reverse().map((h) => {
+    const winners = (h.winners || []).map((w) => `
+      <div class="logent__win">
+        ${w.token ? avatarHtml(w.token, 'sm') : ''}
+        <span class="logent__name">${escapeHtml(w.name)}</span>
+        <span class="logent__amt">+${fmt(w.amount)}</span>
+        ${w.handName ? `<span class="logent__hand">${escapeHtml(w.handName)}</span>` : ''}
+      </div>`).join('');
+    // Showdown → the winning 5 cards. Fold-win → just the community cards.
+    const cards = h.showdown && h.winners?.[0]?.bestCards?.length
+      ? `<div class="logent__cards">${h.winners[0].bestCards.map(cardMiniHtml).join('')}</div>`
+      : (h.board?.length
+        ? `<div class="logent__cards logent__cards--board"><span class="logent__cap">Table</span>${h.board.map(cardMiniHtml).join('')}</div>`
+        : `<div class="logent__cap">Folded before the flop</div>`);
+    const note = h.showdown ? '' : '<span class="logent__cap">· won uncontested</span>';
+    return `
+      <div class="logent">
+        <div class="logent__head"><b>Hand ${h.handNumber}</b><span>Pot ${fmt(h.pot)}</span>${note}</div>
+        ${winners}
+        ${cards}
+      </div>`;
+  }).join('');
 }
 
 function renderSeats(players, hand, you) {

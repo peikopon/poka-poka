@@ -192,6 +192,7 @@ class Room {
     this._streetTimer = null;   // pause between betting rounds (STREET_PAUSE_MS)
     this.actionSeq = 0;         // monotonic counter for broadcast action sounds
     this.lastActionInfo = null; // { seq, playerId, action } — latest applied action
+    this.handLog = [];          // per-hand history entries (capped, newest last)
   }
 
   // ── seating ───────────────────────────────────────────────────────────
@@ -430,6 +431,26 @@ class Room {
       ? winners
       : winners.map((w) => ({ ...w, handName: null, bestCards: [] }));
     this.result = { winners: shownWinners, board: this.hand.board.slice(), showdown: this.revealAll };
+
+    // Hand-history entry. `shownWinners` already respects the reveal rule:
+    // on a fold-win it carries NO handName/bestCards, so the log shows only
+    // the (public) table cards — the winner's hand stays secret.
+    this.handLog.push({
+      handNumber: this.handNumber,
+      showdown: this.revealAll,
+      board: this.hand.board.slice(),
+      pot: Object.values(payouts).reduce((a, b) => a + b, 0),
+      winners: shownWinners.map((w) => ({
+        id: w.id,
+        name: w.name,
+        token: this.players.get(w.id)?.token ?? null,
+        amount: w.amount,
+        handName: w.handName,
+        bestCards: w.bestCards,
+      })),
+    });
+    if (this.handLog.length > 30) this.handLog.shift(); // keep the last 30 hands
+
     this.phase = PHASE.HAND_OVER;
     this.broadcast();
 
@@ -672,6 +693,8 @@ class Room {
       hand,
       result: this.result,
       blinds: this.blinds,
+      // Hand history (public info only — see endHand). Same for all viewers.
+      log: this.handLog,
     };
   }
 }
