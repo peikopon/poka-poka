@@ -145,7 +145,7 @@ async function boot() {
     toast(m.message || 'Something went wrong');
   });
   net.onMessage('chat', (m) => pushChat(m));
-  net.onMessage('react', (m) => floatEmote(m.emote));
+  net.onMessage('react', (m) => floatEmote(m.emote, m.id));
   // A fresh seat (new join/create) starts with a clean chat history.
   net.onMessage('joined', () => clearChat());
   // Which avatars are already taken in the room we're about to join.
@@ -1057,6 +1057,7 @@ function seatEl(p, pos, hand, role) {
     + (p.hasFolded ? ' seat--folded' : '')
     + (isActive ? ' seat--active' : '')
     + (offline ? ' seat--offline' : '');
+  el.dataset.pid = p.id; // anchor for emote bubbles
   el.style.left = pos[0] + '%';
   el.style.top = pos[1] + '%';
 
@@ -1123,7 +1124,7 @@ function renderYou(players, you) {
 
   zone.innerHTML = `
     <div class="you-hole${animDealHole && dealt ? ' is-dealing' : ''}">${hole}</div>
-    <div class="you-plate">
+    <div class="you-plate" data-pid="${me.id}">
       ${avatarHtml(me.token, 'sm')}
       <div>
         <div class="you-plate__name">${escapeHtml(me.name)} ${blindBadge(role)} ${crown}</div>
@@ -1444,16 +1445,31 @@ function pulsePot() {
   p.classList.add('pot-bump');
 }
 
-function floatEmote(emote) {
+// Show a reaction NEXT TO the sender's avatar (their seat, or your own plate)
+// for ~2s. Spectators have no seat, so their reactions float mid-table.
+function floatEmote(emote, senderId) {
   const layer = document.getElementById('emote-floats');
   if (!layer) return;
   const el = document.createElement('div');
   el.className = 'emote-float';
   el.textContent = emote;
-  el.style.left = (40 + Math.random() * 20) + '%';
-  el.style.top = '55%';
+
+  const anchor = senderId
+    ? (document.querySelector(`.seat[data-pid="${senderId}"]`)
+      || document.querySelector(`.you-plate[data-pid="${senderId}"]`))
+    : null;
+  if (anchor) {
+    const lr = layer.getBoundingClientRect();
+    const ar = anchor.getBoundingClientRect();
+    // just above the avatar, small jitter so repeat spam doesn't stack exactly
+    el.style.left = (ar.left + ar.width / 2 - lr.left + (Math.random() * 16 - 8)) + 'px';
+    el.style.top = (ar.top - lr.top - 8) + 'px';
+  } else {
+    el.style.left = (40 + Math.random() * 20) + '%';
+    el.style.top = '55%';
+  }
   layer.appendChild(el);
-  setTimeout(() => el.remove(), 1800);
+  setTimeout(() => el.remove(), 2000);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

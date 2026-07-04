@@ -665,12 +665,15 @@ html, body {
 /* floating emote bubbles */
 .emote-floats { position: absolute; inset: 0; pointer-events: none; z-index: 15; }
 .emote-float {
-  position: absolute; font-size: 28px; animation: float-up 1.8s ease forwards;
+  position: absolute; font-size: 26px; animation: float-up 2s ease forwards;
+  text-shadow: 0 2px 8px rgba(33, 29, 26, .25);
 }
+/* anchored at the avatar's center-top: pop in, hover beside the player, fade */
 @keyframes float-up {
-  from { transform: translateY(0) scale(0.6); opacity: 0; }
-  20% { opacity: 1; transform: translateY(-10px) scale(1.1); }
-  to { transform: translateY(-80px) scale(1); opacity: 0; }
+  from { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+  12% { opacity: 1; transform: translate(-50%, -12px) scale(1.15); }
+  75% { opacity: 1; transform: translate(-50%, -22px) scale(1); }
+  to { transform: translate(-50%, -44px) scale(0.95); opacity: 0; }
 }
 
 /* ════════════════ 7 · RESULTS ════════════════ */
