@@ -102,6 +102,24 @@ export const turnState = {
   },
   result: null,
   blinds: { level: 1, smallBlind: 5, bigBlind: 10, mode: 'increasing', handsToNext: 4 },
+  // Hand-history entries for the Log drawer: one fold-win (table cards only —
+  // the winner's hand stays secret) and one true showdown (hand revealed).
+  log: [
+    {
+      handNumber: 10,
+      showdown: false,
+      board: ['Qh', '8s', '3d'],
+      pot: 120,
+      winners: [{ id: 'p3', name: 'Jess', token: 'avatar-05', amount: 120, net: 75, handName: null, bestCards: [] }],
+    },
+    {
+      handNumber: 11,
+      showdown: true,
+      board: ['Ah', 'Kd', '7s', '4c', '2d'],
+      pot: 360,
+      winners: [{ id: 'p1', name: 'Mia', token: 'avatar-02', amount: 360, net: 240, handName: 'Two Pair', bestCards: ['Ah', 'Ad', 'Kd', 'Kh', '7s'] }],
+    },
+  ],
 };
 
 // ── Fixture 3: Showdown / game over (results) ────────────────────────────────

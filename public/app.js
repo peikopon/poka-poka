@@ -55,6 +55,12 @@ let prevHandNumber = null; // for hole-card deal animation
 let wasMyTurn = false;     // to chime once when it becomes my turn
 let prevPhase = null;      // to detect hand-over / game transitions
 let actDeadlineLocal = null; // turn deadline anchored to THIS device's clock
+let prevActionSeq = 0;     // last hand.lastAction.seq we played a sound for
+
+// Every character has its own recorded voice: public/voice_pack/<fruit>-<word>.mp3
+// (sound.js maps the avatar token to the fruit). Same player = same voice on
+// every device.
+const VOICE_ACTIONS = ['check', 'call', 'raise', 'allin'];
 
 // pre-game (pre-state) flow scratch
 const draft = {
@@ -139,7 +145,7 @@ async function boot() {
     toast(m.message || 'Something went wrong');
   });
   net.onMessage('chat', (m) => pushChat(m));
-  net.onMessage('react', (m) => floatEmote(m.emote));
+  net.onMessage('react', (m) => floatEmote(m.emote, m.id));
   // A fresh seat (new join/create) starts with a clean chat history.
   net.onMessage('joined', () => clearChat());
   // Which avatars are already taken in the room we're about to join.
@@ -191,6 +197,7 @@ function showScreen(name) {
   document.body.classList.toggle('on-table', name === 'table');
   if (name === 'identity') enterIdentity();
   if (name === 'join') prefillJoinBoxes();
+  if (name === 'table') sound.loadVoices?.(); // pre-decode action voices
 }
 
 // On the identity screen, refresh which avatars are available. Hosting a new
@@ -254,6 +261,7 @@ function applyState(s) {
   if (s?.hand?.handNumber != null) prevHandNumber = s.hand.handNumber;
   prevPhase = s?.room?.phase ?? null;
   wasMyTurn = !!s?.hand?.legal;
+  if (s?.hand?.lastAction) prevActionSeq = s.hand.lastAction.seq;
 }
 
 // Compare the incoming snapshot with the previous one to fire sounds + flag
@@ -276,6 +284,17 @@ function detectTransitions(s) {
   }
   // It just became my turn.
   if (hand?.legal && !wasMyTurn) sound.play('turn');
+
+  // Someone acted → EVERY device plays it (the actor's included). `state` is
+  // still the PREVIOUS snapshot here; when it's null this is our first
+  // snapshot (join/rejoin), so we skip replaying a stale action.
+  const la = hand?.lastAction;
+  if (la && state && la.seq !== prevActionSeq) {
+    const actor = s?.players?.find((p) => p.id === la.playerId);
+    if (la.action === 'allin') sound.play('allin'); // dramatic hit for the whole table
+    if (VOICE_ACTIONS.includes(la.action)) sound.voice(la.action, actor?.token);
+    else if (la.action === 'fold') sound.play('fold');
+  }
 
   // A betting round ended → the street bets get gathered into the pot. This
   // happens when the board grows (new street) or the hand ends. Animate it
@@ -337,10 +356,13 @@ function syncSoundButton() {
   btn.setAttribute('aria-label', on ? 'Mute sound' : 'Unmute sound');
 }
 
+// winCondition is no longer host-configurable: games run last-chips-standing,
+// and the host can always end early with the table's Finish button.
 function defaultSettings() {
   return {
     startingStack: 2500, smallBlind: 5, bigBlind: 10, blindsMode: 'increasing',
-    maxSeats: 8, betting: 'no-limit', turnTimer: 30, winCondition: 'last-standing',
+    maxSeats: 8, betting: 'no-limit', turnTimer: 30,
+    revealToBusted: false,
   };
 }
 
@@ -370,10 +392,10 @@ function buildRulesOptions() {
     { v: 15, t: '15s' }, { v: 30, t: '30s' }, { v: 60, t: '60s' }, { v: 0, t: 'Off' },
   ], draft.settings.turnTimer, (v) => { draft.settings.turnTimer = v; });
 
-  // Win condition
-  fillSeg('[data-setting="winCondition"] .seg', [
-    { v: 'last-standing', t: 'Last chips' }, { v: 'host-ends', t: 'Host ends' },
-  ], draft.settings.winCondition, (v) => { draft.settings.winCondition = v; });
+  // Busted players see cards (X-ray for eliminated friends)
+  fillSeg('[data-setting="revealToBusted"] .seg', [
+    { v: false, t: 'Off' }, { v: true, t: 'On' },
+  ], draft.settings.revealToBusted, (v) => { draft.settings.revealToBusted = v; });
 
   // Seats stepper
   document.getElementById('seats-value').textContent = draft.settings.maxSeats;
@@ -478,12 +500,23 @@ function wireEvents() {
   document.getElementById('home-host').addEventListener('click', () => {
     draft.intent = 'host'; showScreen('rules');
   });
-  setupCodeEntry('#home-join-form', (code) => { draft.code = code; });
+  setupCodeEntry('#home-join-form', (code) => {
+    draft.code = code;
+    const err = document.getElementById('home-error');
+    if (err) err.hidden = true; // typing clears the "enter a code" error
+  });
   document.getElementById('home-join-go').addEventListener('click', goJoinFromHome);
   document.getElementById('home-join-form').addEventListener('submit', (e) => { e.preventDefault(); goJoinFromHome(); });
   document.getElementById('home-spectate').addEventListener('click', () => {
-    if (draft.code.length === 4) spectate(draft.code);
-    else showScreen('join');
+    // Watching needs a table code: block with an inline error rather than
+    // silently proceeding (or navigating) without one.
+    const err = document.getElementById('home-error');
+    if (draft.code.length !== 4) {
+      if (err) { err.hidden = false; err.textContent = 'Enter the 4-letter code first to watch a table.'; }
+      return;
+    }
+    if (err) err.hidden = true;
+    spectate(draft.code);
   });
 
   // Back buttons
@@ -693,7 +726,9 @@ function sendAction(action, amount) {
   if (amount != null) payload.amount = amount;
   actionPending = true;
   setActionBarLocked(true);
-  sound.play(action); // fold | check | call | raise | allin
+  // Tap feedback only — the action's voice/sound plays for EVERYONE (us
+  // included) when the server broadcasts hand.lastAction back.
+  sound.play('click');
   net.send('action', payload);
 }
 
@@ -850,6 +885,9 @@ function renderTable() {
   // winner banner during the hand-over reveal
   renderShowdown();
 
+  // hand-history drawer content
+  renderLog();
+
   // action bar vs spectator footer
   const spectating = !!you.isSpectator;
   document.getElementById('actionbar').hidden = spectating;
@@ -929,11 +967,62 @@ function renderBoard(board) {
   }
 }
 
+// Hand-history drawer: one entry per finished hand, newest first. The server
+// only ever sends public info here — on a fold-win the entry has no handName
+// or bestCards, so we show just the table cards and keep the winner's hand
+// secret (same reveal rule as the live table).
+function renderLog() {
+  const body = document.getElementById('log-body');
+  if (!body) return;
+  const log = state?.log || [];
+  if (!log.length) {
+    body.innerHTML = '<div class="logent logent--empty">No hands finished yet.</div>';
+    return;
+  }
+  body.innerHTML = [...log].reverse().map((h) => {
+    const winners = (h.winners || []).map((w) => {
+      // "+" is the winner's PROFIT (payout minus their own chips in the pot),
+      // not the pot size — the pot is already shown in the header.
+      const net = w.net ?? w.amount;
+      const amt = net >= 0 ? `+${fmt(net)}` : `−${fmt(-net)}`;
+      return `
+      <div class="logent__win">
+        ${w.token ? avatarHtml(w.token, 'sm') : ''}
+        <span class="logent__name">${escapeHtml(w.name)}</span>
+        <span class="logent__amt${net < 0 ? ' logent__amt--neg' : ''}">${amt}</span>
+        ${w.handName ? `<span class="logent__hand">${escapeHtml(w.handName)}</span>` : ''}
+      </div>`;
+    }).join('');
+    // Showdown → the winning 5 cards. Fold-win → the community cards padded
+    // with face-down backs to a full row of 5: the backs show at a glance how
+    // far the hand got before everyone folded.
+    const cards = h.showdown && h.winners?.[0]?.bestCards?.length
+      ? `<div class="logent__cards">${h.winners[0].bestCards.map(cardMiniHtml).join('')}</div>`
+      : `<div class="logent__cards">${Array.from({ length: 5 }, (_, i) =>
+          (h.board?.[i] ? cardMiniHtml(h.board[i]) : cardBackMiniHtml())).join('')}</div>`;
+    const note = h.showdown ? '' : '<span class="logent__cap">· won uncontested</span>';
+    return `
+      <div class="logent">
+        <div class="logent__head"><b>Hand ${h.handNumber}</b><span>Pot ${fmt(h.pot)}</span>${note}</div>
+        ${winners}
+        ${cards}
+      </div>`;
+  }).join('');
+}
+
 function renderSeats(players, hand, you) {
   const seats = document.getElementById('seats');
   seats.innerHTML = '';
   // Render everyone EXCEPT "you" (you sit at the bottom in the you-zone).
-  const others = players.filter((p) => p.id !== you.id);
+  // Every viewer renders the SAME physical circle: turn order = ascending seat
+  // index = clockwise. With you fixed at the bottom, the player who acts after
+  // you must appear at your LEFT, continuing left → top → right back to you.
+  // So we rotate the seat-ordered list to start just after your seat, and the
+  // arc positions run left-to-right. Spectators (no seat) see absolute order.
+  const bySeat = [...players].sort((a, b) => a.seat - b.seat);
+  const myIdx = you ? bySeat.findIndex((p) => p.id === you.id) : -1;
+  const rotated = myIdx >= 0 ? [...bySeat.slice(myIdx + 1), ...bySeat.slice(0, myIdx)] : bySeat;
+  const others = rotated.filter((p) => !you || p.id !== you.id);
   const roles = blindRoles(players, hand);
 
   // Distribute around the top arc of the oval. Positions as % of felt-wrap.
@@ -968,6 +1057,7 @@ function seatEl(p, pos, hand, role) {
     + (p.hasFolded ? ' seat--folded' : '')
     + (isActive ? ' seat--active' : '')
     + (offline ? ' seat--offline' : '');
+  el.dataset.pid = p.id; // anchor for emote bubbles
   el.style.left = pos[0] + '%';
   el.style.top = pos[1] + '%';
 
@@ -1034,7 +1124,7 @@ function renderYou(players, you) {
 
   zone.innerHTML = `
     <div class="you-hole${animDealHole && dealt ? ' is-dealing' : ''}">${hole}</div>
-    <div class="you-plate">
+    <div class="you-plate" data-pid="${me.id}">
       ${avatarHtml(me.token, 'sm')}
       <div>
         <div class="you-plate__name">${escapeHtml(me.name)} ${blindBadge(role)} ${crown}</div>
@@ -1260,8 +1350,10 @@ function renderResults() {
   const cards = document.getElementById('results-cards');
   cards.innerHTML = (winner?.bestCards || []).map(cardHtml).join('');
 
-  // standings (sorted by chips desc)
-  const sorted = [...players].sort((a, b) => b.chips - a.chips);
+  // standings: chips desc; among busted (0-chip) players the one who survived
+  // MORE hands ranks higher — busting first = last place.
+  const sorted = [...players].sort((a, b) =>
+    (b.chips - a.chips) || ((b.bustedHand || 0) - (a.bustedHand || 0)));
   const st = document.getElementById('results-standings');
   st.innerHTML = '';
   sorted.forEach((p, i) => {
@@ -1353,16 +1445,31 @@ function pulsePot() {
   p.classList.add('pot-bump');
 }
 
-function floatEmote(emote) {
+// Show a reaction NEXT TO the sender's avatar (their seat, or your own plate)
+// for ~2s. Spectators have no seat, so their reactions float mid-table.
+function floatEmote(emote, senderId) {
   const layer = document.getElementById('emote-floats');
   if (!layer) return;
   const el = document.createElement('div');
   el.className = 'emote-float';
   el.textContent = emote;
-  el.style.left = (40 + Math.random() * 20) + '%';
-  el.style.top = '55%';
+
+  const anchor = senderId
+    ? (document.querySelector(`.seat[data-pid="${senderId}"]`)
+      || document.querySelector(`.you-plate[data-pid="${senderId}"]`))
+    : null;
+  if (anchor) {
+    const lr = layer.getBoundingClientRect();
+    const ar = anchor.getBoundingClientRect();
+    // just above the avatar, small jitter so repeat spam doesn't stack exactly
+    el.style.left = (ar.left + ar.width / 2 - lr.left + (Math.random() * 16 - 8)) + 'px';
+    el.style.top = (ar.top - lr.top - 8) + 'px';
+  } else {
+    el.style.left = (40 + Math.random() * 20) + '%';
+    el.style.top = '55%';
+  }
   layer.appendChild(el);
-  setTimeout(() => el.remove(), 1800);
+  setTimeout(() => el.remove(), 2000);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

@@ -106,6 +106,55 @@ export function createSound() {
     if (f) { try { f(); } catch { /* ignore */ } }
   }
 
+  // ── Voice clips (custom per-character voice pack) ──────────────────────────
+  // public/voice_pack/<fruit>-<word>.mp3 — one real recording per avatar per
+  // action, so every character speaks with its own voice on every device.
+  // All 36 clips (~2 MB) are fetched+decoded lazily the first time the table
+  // shows; until a clip is ready we fall back to that action's synth beep.
+  const VOICE_WORDS = ['check', 'call', 'raise', 'allin'];
+  const TOKEN_FRUIT = {
+    'avatar-01': 'strawberry', 'avatar-02': 'orange', 'avatar-03': 'lemon',
+    'avatar-04': 'apple', 'avatar-05': 'grapes', 'avatar-06': 'watermelon',
+    'avatar-07': 'pineapple', 'avatar-08': 'cherries', 'avatar-09': 'blueberry',
+  };
+  const voiceBufs = {}; // "<fruit>-<word>" -> AudioBuffer
+  let voicesRequested = false;
+
+  function loadVoices() {
+    if (voicesRequested) return;
+    voicesRequested = true;
+    const c = ensure();
+    if (!c) return;
+    for (const fruit of Object.values(TOKEN_FRUIT)) {
+      for (const word of VOICE_WORDS) {
+        const key = `${fruit}-${word}`;
+        fetch(`./voice_pack/${key}.mp3`)
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+          .then((ab) => c.decodeAudioData(ab))
+          .then((buf) => { voiceBufs[key] = buf; })
+          .catch(() => { /* fall back to the synth beep for this clip */ });
+      }
+    }
+  }
+
+  function voice(name, token) {
+    if (!enabled) return;
+    unlock();
+    const c = ensure();
+    if (!c) return;
+    const fruit = TOKEN_FRUIT[token] || 'strawberry';
+    const buf = voiceBufs[`${fruit}-${name}`];
+    if (!buf) { loadVoices(); play(name); return; } // not loaded yet → beep fallback
+    try {
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const g = c.createGain();
+      g.gain.value = 0.9;
+      src.connect(g); g.connect(master);
+      src.start();
+    } catch { /* ignore */ }
+  }
+
   function setEnabled(on) {
     enabled = !!on;
     savePref();
@@ -114,6 +163,8 @@ export function createSound() {
 
   return {
     play,
+    voice,
+    loadVoices,
     unlock,
     isOn: () => enabled,
     toggle: () => { setEnabled(!enabled); return enabled; },

@@ -17,7 +17,11 @@ import {
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O for legibility
 const CODE_LEN = 4;
-const HAND_OVER_MS = 5000;      // reveal time before next hand
+// ── Game pacing (developer-tunable) ─────────────────────────────────────────
+// These two constants control how much "breathing room" players get to read
+// what just happened. Adjust here (ms):
+const HAND_OVER_MS = 3000;      // winner banner: pause before the next hand deals
+const STREET_PAUSE_MS = 2000;   //  each community-card stage is called a "street": preflop → flop → turn → river. STREET_PAUSE_MS (2s) is the breather between those stages, whenever a betting round finishes:
 const OFFLINE_FALLBACK_MS = 30000; // turn clock for an offline player when the table has NO timer (Off)
 const DROP_GRACE_MS = Number(process.env.DROP_GRACE_MS) || 2 * 60 * 1000; // disconnect grace before a seat is eliminated
 
@@ -185,6 +189,10 @@ class Room {
     this.actDeadline = null;
     this._turnTimer = null;
     this._handOverTimer = null;
+    this._streetTimer = null;   // pause between betting rounds (STREET_PAUSE_MS)
+    this.actionSeq = 0;         // monotonic counter for broadcast action sounds
+    this.lastActionInfo = null; // { seq, playerId, action } — latest applied action
+    this.handLog = [];          // per-hand history entries (capped, newest last)
   }
 
   // ── seating ───────────────────────────────────────────────────────────
@@ -209,6 +217,7 @@ class Room {
       chips: this.settings.startingStack,
       status: 'connected',
       ready: false,
+      bustedHand: null, // hand number at which they hit 0 chips (for final ranking)
       socket,
     };
     this.players.set(id, player);
@@ -323,6 +332,7 @@ class Room {
     this.phase = PHASE.IN_HAND;
     this.result = null;
     this.revealAll = false;
+    this.lastActionInfo = null; // fresh hand — no stale action to replay
     this.afterStep();
   }
 
@@ -339,24 +349,29 @@ class Room {
       const p = this.players.get(playerId);
       return send(p?.socket, S2C.ERROR, { code: ERR.ILLEGAL_ACTION, message: res?.error });
     }
+    // Record the applied action so EVERY client can play its sound/voice.
+    // A call/raise that leaves the actor at 0 chips is announced as all-in.
+    const effective = (action !== ACTIONS.FOLD && seat.isAllIn) ? ACTIONS.ALLIN : action;
+    this.lastActionInfo = { seq: ++this.actionSeq, playerId, action: effective };
     this.afterStep();
   }
 
   // Drive street progression + timers after any state change, then broadcast.
+  // When a betting round completes we do NOT deal the next street immediately:
+  // players get STREET_PAUSE_MS to see the final bets, then resolveStreet()
+  // deals — one street per pause, so all-in runouts play out dramatically too.
   afterStep() {
     this.clearTurnTimer();
+    this.clearStreetPause();
 
-    // resolve completed betting rounds, running out the board if no betting remains
-    let guard = 0;
-    while (this.phase === PHASE.IN_HAND && this.hand.activeSeat == null && guard++ < 10) {
-      if (this.hand.street === STREET.SHOWDOWN) { this.endHand(); return; }
-      const canBet = this.hand.seats.filter((s) => s && s.inHand && !s.hasFolded && !s.isAllIn).length;
+    if (this.phase === PHASE.IN_HAND && this.hand.activeSeat == null) {
       const live = this.hand.seats.filter((s) => s && s.inHand && !s.hasFolded).length;
-      if (live <= 1) { this.endHand(); return; }
-      const adv = advanceStreet(this.hand);
-      if (adv.showdown || this.hand.street === STREET.SHOWDOWN) { this.endHand(); return; }
-      if (canBet < 2) continue; // nobody left to act → keep running streets
-      break; // a fresh betting round begins; engine set activeSeat
+      // Everyone folded to one player, or betting after the river is done →
+      // settle now; the winner banner provides the viewing pause (HAND_OVER_MS).
+      if (this.hand.street === STREET.SHOWDOWN || live <= 1) { this.endHand(); return; }
+      this.broadcast();
+      this._streetTimer = setTimeout(() => this.resolveStreet(), STREET_PAUSE_MS);
+      return;
     }
 
     if (this.phase === PHASE.IN_HAND && this.hand.activeSeat != null) {
@@ -365,8 +380,27 @@ class Room {
     this.broadcast();
   }
 
+  // Deal exactly one street after the pause; pause again if nobody can bet
+  // (all-in runout) so each community reveal gets its own beat.
+  resolveStreet() {
+    this._streetTimer = null;
+    if (this.phase !== PHASE.IN_HAND || !this.hand) return;
+    const live = this.hand.seats.filter((s) => s && s.inHand && !s.hasFolded).length;
+    if (this.hand.street === STREET.SHOWDOWN || live <= 1) { this.endHand(); return; }
+    const adv = advanceStreet(this.hand);
+    if (adv.showdown || this.hand.street === STREET.SHOWDOWN) { this.endHand(); return; }
+    if (this.hand.activeSeat == null) {
+      this.broadcast();
+      this._streetTimer = setTimeout(() => this.resolveStreet(), STREET_PAUSE_MS);
+      return;
+    }
+    this.scheduleTurnTimer();
+    this.broadcast();
+  }
+
   endHand() {
     this.clearTurnTimer();
+    this.clearStreetPause();
     const playersById = {};
     for (const p of this.players.values()) playersById[p.id] = { name: p.name };
     const { winners, payouts } = settle(this.hand, playersById);
@@ -379,6 +413,14 @@ class Room {
       const p = this.players.get(s.id);
       if (p) p.chips = s.chips;
     }
+    // Record bust order for final standings: a player who hits 0 chips is
+    // stamped with the hand number they busted on. Busting earlier = ranked
+    // lower on the results screen (ties on 0 chips are broken by this).
+    for (const s of this.hand.seats) {
+      if (!s) continue;
+      const p = this.players.get(s.id);
+      if (p && p.chips === 0 && p.bustedHand == null) p.bustedHand = this.handNumber;
+    }
     // A true showdown = 2+ players still in when betting is done (they went to
     // the end together). Only then do we reveal cards AND the winning hand name.
     // If everyone else folded, the lone winner's hand stays secret — we don't
@@ -389,6 +431,31 @@ class Room {
       ? winners
       : winners.map((w) => ({ ...w, handName: null, bestCards: [] }));
     this.result = { winners: shownWinners, board: this.hand.board.slice(), showdown: this.revealAll };
+
+    // Hand-history entry. `shownWinners` already respects the reveal rule:
+    // on a fold-win it carries NO handName/bestCards, so the log shows only
+    // the (public) table cards — the winner's hand stays secret.
+    // `net` = what the winner actually GAINED (payout minus the chips they
+    // themselves put into the pot) — that's what the log displays as "+".
+    const committedById = {};
+    for (const s of this.hand.seats) if (s) committedById[s.id] = s.committed;
+    this.handLog.push({
+      handNumber: this.handNumber,
+      showdown: this.revealAll,
+      board: this.hand.board.slice(),
+      pot: Object.values(payouts).reduce((a, b) => a + b, 0),
+      winners: shownWinners.map((w) => ({
+        id: w.id,
+        name: w.name,
+        token: this.players.get(w.id)?.token ?? null,
+        amount: w.amount,                                  // gross payout received
+        net: w.amount - (committedById[w.id] || 0),        // actual profit this hand
+        handName: w.handName,
+        bestCards: w.bestCards,
+      })),
+    });
+    if (this.handLog.length > 30) this.handLog.shift(); // keep the last 30 hands
+
     this.phase = PHASE.HAND_OVER;
     this.broadcast();
 
@@ -435,13 +502,18 @@ class Room {
     // by calling a bet). Applies to slow and disconnected players alike.
     const action = legal && legal.canCheck ? ACTIONS.CHECK : ACTIONS.FOLD;
     const res = applyAction(this.hand, seat.id, action, 0);
-    if (res && res.ok) this.afterStep();
+    if (res && res.ok) {
+      // Timed-out plays are announced like any other action.
+      this.lastActionInfo = { seq: ++this.actionSeq, playerId: seat.id, action };
+      this.afterStep();
+    }
   }
 
   clearTurnTimer() { if (this._turnTimer) { clearTimeout(this._turnTimer); this._turnTimer = null; } this.actDeadline = null; }
   clearHandOver() { if (this._handOverTimer) { clearTimeout(this._handOverTimer); this._handOverTimer = null; } }
+  clearStreetPause() { if (this._streetTimer) { clearTimeout(this._streetTimer); this._streetTimer = null; } }
   clearDropTimers() { for (const p of this.players.values()) if (p._dropTimer) { clearTimeout(p._dropTimer); p._dropTimer = null; } }
-  clearTimers() { this.clearTurnTimer(); this.clearHandOver(); this.clearDropTimers(); }
+  clearTimers() { this.clearTurnTimer(); this.clearHandOver(); this.clearStreetPause(); this.clearDropTimers(); }
 
   // ── membership changes ──────────────────────────────────────────────────
   handleDisconnect(playerId) {
@@ -544,6 +616,14 @@ class Room {
     const seatById = (id) => this.hand && this.hand.seats.find((s) => s && s.id === id);
     const activeId = this.hand && this.hand.activeSeat != null ? this.hand.seats[this.hand.activeSeat]?.id : null;
 
+    // X-ray for the fallen: when the host enabled `revealToBusted`, a seated
+    // player who has busted (0 chips, not dealt into the current hand) sees
+    // every live hole card. They can no longer act, so nothing leaks that
+    // could change the game — it's a spectator perk for eliminated friends.
+    const viewerP = this.players.get(viewerId);
+    const xray = !!this.settings.revealToBusted && !isSpectator
+      && !!viewerP && viewerP.chips <= 0 && !seatById(viewerId);
+
     const players = this.seatedInOrder().map((p) => {
       const hs = seatById(p.id);
       return {
@@ -559,10 +639,13 @@ class Room {
         hasFolded: hs ? hs.hasFolded : false,
         isAllIn: hs ? hs.isAllIn : false,
         bet: hs ? hs.bet : 0,
+        bustedHand: p.bustedHand ?? null,
         // Owner always sees their own cards; at a true showdown (hand-over with
-        // 2+ live players) everyone's non-folded hole cards are revealed.
+        // 2+ live players) everyone's non-folded hole cards are revealed; and
+        // busted viewers see live cards when the host allows it (xray).
         holeCards: hs && (p.id === viewerId
-          || (this.phase === PHASE.HAND_OVER && this.revealAll && hs.inHand && !hs.hasFolded))
+          || (this.phase === PHASE.HAND_OVER && this.revealAll && hs.inHand && !hs.hasFolded)
+          || (xray && !hs.hasFolded))
           ? hs.holeCards : null,
         isActive: p.id === activeId,
         lastAction: hs ? hs.lastAction : null,
@@ -589,6 +672,9 @@ class Room {
         sbSeat: this.hand.sbSeat,
         bbSeat: this.hand.bbSeat,
         bigBlind: this.hand.bigBlind,
+        // Latest applied action { seq, playerId, action } — clients diff `seq`
+        // to play the action sound/voice on EVERY device, not just the actor's.
+        lastAction: this.lastActionInfo,
         legal: youAct ? legalActions(this.hand, viewerId) : null,
       };
     }
@@ -612,6 +698,8 @@ class Room {
       hand,
       result: this.result,
       blinds: this.blinds,
+      // Hand history (public info only — see endHand). Same for all viewers.
+      log: this.handLog,
     };
   }
 }

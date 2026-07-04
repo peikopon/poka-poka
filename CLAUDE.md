@@ -53,8 +53,13 @@ Run locally: `npm install` then `npm run dev` (or `npm start`), open
 **Caching:** the server sends `Cache-Control: no-store` for all static files (no build
 hashing), so edits always show on a normal reload — important for phones / Add-to-Home-Screen.
 
-**Deferred (per plan):** hand-history log panel content; Pot-Limit & Fixed-Limit
-betting modes; persistence/DB. The room `Map` in `rooms.js` is the seam for Redis.
+**Hand log:** the Log drawer lists every finished hand (server keeps the last 30
+in `room.handLog`, broadcast as `ClientState.log`): winner(s) + amount + pot, and
+at a true showdown the hand name + winning 5 cards. **Fold-wins show only the
+community cards** — same secrecy rule as the live reveal.
+
+**Deferred (per plan):** Pot-Limit & Fixed-Limit betting modes; persistence/DB.
+The room `Map` in `rooms.js` is the seam for Redis.
 
 ---
 
@@ -204,6 +209,23 @@ Rules of thumb:
 - **Lifecycle:** `lobby` → `in-hand` ⇄ `hand-over` (repeats per hand) → `game-over`.
 - **Per hand:** post blinds → deal hole cards → preflop → flop → turn → river →
   showdown → award pot(s) → reveal (showdown only) → rotate button → next hand.
+- **Pacing (developer-tunable constants at the top of `rooms.js`):**
+  `STREET_PAUSE_MS` (2s) — after every betting round the server pauses before
+  dealing the next street, so players see the final bets; all-in runouts reveal
+  one street per pause. `HAND_OVER_MS` (8s) — winner-banner time before the
+  next hand deals. Adjust game tempo by editing these two numbers.
+- **Action sounds table-wide:** every applied action is broadcast in the snapshot
+  as `hand.lastAction = { seq, playerId, action }` (a call/raise that empties the
+  stack is normalized to `allin`). Clients diff `seq` and play the character's
+  recorded voice clip (`public/voice_pack/<fruit>-<word>.mp3`, one per avatar per
+  action; token→fruit map in `sound.js` `TOKEN_FRUIT`) on EVERY device, plus a
+  dramatic all-in SFX. Review page: `/voice-test.html` (dev tool, not linked).
+- **Final ranking:** when a player ends a hand at 0 chips, `player.bustedHand`
+  records the hand number; results rank 0-chip players by it — busting first =
+  last place.
+- **Seat layout is viewer-relative:** each client rotates the seat-ordered player
+  list to start after their own seat, so turn order always flows clockwise from
+  "you" at the bottom (left → top → right). Consistent across all viewers.
 - **Two independent timers:**
   - **Turn timer** (host setting 15/30/60s, or Off): on timeout, auto-**check if
     possible else fold** — never auto-calls. Disconnected players use this SAME clock
@@ -230,7 +252,12 @@ must agree on these exact options:
 | Max seats | stepper, up to 8 | 8 |
 | Betting | **No-Limit** / Pot / Fixed | No-Limit |
 | Turn timer | 15s / **30s** / 60s / Off | 30s |
-| Win condition | **Last chips standing** / Host ends | Last chips standing |
+| Busted players see cards | **Off** / On | Off — `revealToBusted`: when On, an eliminated (0-chip) seated player sees everyone's live hole cards (they can no longer act, so it's a spectator perk) |
+
+> Win condition is **not** host-configurable (removed from the rules screen):
+> games always run last-chips-standing, and the host can end early anytime with
+> the table's **Finish** button. The server still accepts/defaults `winCondition`
+> in the protocol for back-compat.
 
 The lobby surfaces a subset as tags (e.g. `No-Limit`, `5/10 ↑`, `2.5k`, `30s`).
 

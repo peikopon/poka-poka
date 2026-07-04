@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voice review — Poka-Poka (dev tool)</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #FBF6EE; color: #211D1A; margin: 24px; }
+  h1 { font-size: 20px; } p { color: #9a8f7d; max-width: 640px; }
+  table { border-collapse: collapse; margin-top: 16px; }
+  th, td { padding: 6px 10px; text-align: left; }
+  th { font-size: 12px; color: #9a8f7d; }
+  tr + tr td { border-top: 1px solid #E0D7C8; }
+  button { font: 600 13px system-ui; padding: 8px 14px; border-radius: 10px; border: 1px solid #E0D7C8;
+           background: #fff; cursor: pointer; }
+  button:hover { border-color: #E2613C; color: #E2613C; }
+  button.missing { opacity: .4; text-decoration: line-through; }
+  .all { margin-top: 14px; background: #211D1A; color: #fff; border: 0; padding: 10px 18px; }
+</style>
+</head>
+<body>
+<h1>🔊 Voice review — custom voice pack (dev tool, not linked from the app)</h1>
+<p>Plays the real files the game uses: <code>voice_pack/&lt;fruit&gt;-&lt;word&gt;.mp3</code>,
+one recorded voice per character. Greyed-out buttons mean the file failed to load.</p>
+<table id="grid"></table>
+<button class="all" id="play-all">▶ Play all-in for all 9 characters (1.2s apart)</button>
+
+<script type="module">
+  // Keep in sync with TOKEN_FRUIT in sound.js.
+  const FRUITS = [
+    ['avatar-01', 'strawberry', '🍓'], ['avatar-02', 'orange', '🍊'], ['avatar-03', 'lemon', '🍋'],
+    ['avatar-04', 'apple', '🍎'], ['avatar-05', 'grapes', '🍇'], ['avatar-06', 'watermelon', '🍉'],
+    ['avatar-07', 'pineapple', '🍍'], ['avatar-08', 'cherries', '🍒'], ['avatar-09', 'blueberry', '🫐'],
+  ];
+  const WORDS = ['check', 'call', 'raise', 'allin'];
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const bufs = {};
+  function speak(fruit, word) {
+    if (ctx.state === 'suspended') ctx.resume();
+    const b = bufs[`${fruit}-${word}`]; if (!b) return;
+    const src = ctx.createBufferSource();
+    src.buffer = b;
+    src.connect(ctx.destination); src.start();
+  }
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<tr><th>Character</th>' + WORDS.map(w => `<th>${w}</th>`).join('') + '</tr>'
+    + FRUITS.map(([tok, fruit, emo]) =>
+      `<tr><td>${emo} ${fruit} <small>${tok}</small></td>`
+      + WORDS.map(w => `<td><button data-f="${fruit}" data-w="${w}" id="b-${fruit}-${w}">▶ ${w}</button></td>`).join('') + '</tr>'
+    ).join('');
+
+  for (const [, fruit] of FRUITS.map(f => [f[0], f[1]])) {
+    for (const w of WORDS) {
+      fetch(`./voice_pack/${fruit}-${w}.mp3`)
+        .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
+        .then(ab => ctx.decodeAudioData(ab))
+        .then(b => { bufs[`${fruit}-${w}`] = b; })
+        .catch(() => { document.getElementById(`b-${fruit}-${w}`)?.classList.add('missing'); });
+    }
+  }
+
+  grid.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-w]');
+    if (b) speak(b.dataset.f, b.dataset.w);
+  });
+  document.getElementById('play-all').addEventListener('click', () => {
+    FRUITS.forEach(([, fruit], i) => setTimeout(() => speak(fruit, 'allin'), i * 1200));
+  });
+</script>
+</body>
+</html>

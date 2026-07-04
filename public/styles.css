@@ -448,12 +448,16 @@ html, body {
   background: var(--accent); color: #fff;
   font: 700 9px var(--f-num); padding: 1px 6px; border-radius: 6px; white-space: nowrap;
 }
+/* Role badges (Dealer right corner, SB/BB left corner) share one size system
+   so they sit symmetrically on the avatar and read clearly on a phone. */
 .seat__dealer {
-  position: absolute; right: -8px; top: -6px;
-  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  position: absolute; right: -10px; top: -8px;
+  width: 25px; height: 25px; border-radius: 50%; background: #fff;
   border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(33, 29, 26, .18);
+  z-index: 2;
 }
-.seat__dealer svg { width: 14px; height: 14px; }
+.seat__dealer svg { width: 19px; height: 19px; }
 .seat__bet {
   position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 4px; white-space: nowrap;
@@ -597,6 +601,22 @@ html, body {
 .drawer__title { font: 700 14px var(--f-head); color: var(--ink); }
 .drawer__body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 
+/* hand-history entries */
+.logent { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+.logent--empty { color: var(--muted); font: 500 12px var(--f-body); text-align: center; }
+/* Header pieces never break internally ("Hand 10" stays one unit); when the
+   row is tight a WHOLE piece (e.g. "· won uncontested") wraps to line 2. */
+.logent__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font: 600 11px var(--f-num); color: var(--ink); }
+.logent__head b { font: 700 12px var(--f-num); white-space: nowrap; }
+.logent__head span { color: var(--muted); white-space: nowrap; }
+.logent__win { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.logent__name { font: 700 12px var(--f-body); color: var(--ink); }
+.logent__amt { font: 700 12px var(--f-num); color: var(--good, #4F9D5B); }
+.logent__amt--neg { color: var(--accent); }
+.logent__hand { font: 600 10px var(--f-num); color: var(--accent); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+.logent__cards { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
+.logent__cap { font: 600 10px var(--f-num); color: var(--muted); margin-right: 3px; }
+
 /* chat messages */
 .chat-msg { display: flex; flex-direction: column; animation: fan-in 0.2s ease; }
 .chat-msg--me { align-items: flex-end; }
@@ -645,12 +665,15 @@ html, body {
 /* floating emote bubbles */
 .emote-floats { position: absolute; inset: 0; pointer-events: none; z-index: 15; }
 .emote-float {
-  position: absolute; font-size: 28px; animation: float-up 1.8s ease forwards;
+  position: absolute; font-size: 26px; animation: float-up 2s ease forwards;
+  text-shadow: 0 2px 8px rgba(33, 29, 26, .25);
 }
+/* anchored at the avatar's center-top: pop in, hover beside the player, fade */
 @keyframes float-up {
-  from { transform: translateY(0) scale(0.6); opacity: 0; }
-  20% { opacity: 1; transform: translateY(-10px) scale(1.1); }
-  to { transform: translateY(-80px) scale(1); opacity: 0; }
+  from { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+  12% { opacity: 1; transform: translate(-50%, -12px) scale(1.15); }
+  75% { opacity: 1; transform: translate(-50%, -22px) scale(1); }
+  to { transform: translate(-50%, -44px) scale(0.95); opacity: 0; }
 }
 
 /* ════════════════ 7 · RESULTS ════════════════ */
@@ -775,16 +798,18 @@ html, body {
 
 /* ── Blind badges on seats / you ──────────────────────────────────────────── */
 .blind-badge {
-  position: absolute; left: -7px; top: -6px;
-  width: 18px; height: 18px; border-radius: 50%;
+  position: absolute; left: -10px; top: -8px;
+  width: 25px; height: 25px; border-radius: 50%;
   background: #fff; border: 1px solid var(--border);
   display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(33, 29, 26, .18);
+  z-index: 2;
 }
-.blind-badge svg { width: 13px; height: 13px; }
+.blind-badge svg { width: 19px; height: 19px; }
 .you-plate__name .blind-badge {
-  position: static; width: 16px; height: 16px; vertical-align: middle;
+  position: static; width: 22px; height: 22px; vertical-align: middle;
 }
-.you-plate__name .blind-badge svg { width: 12px; height: 12px; }
+.you-plate__name .blind-badge svg { width: 16px; height: 16px; }
 
 /* ── Card backs + mini cards + opponent cards ─────────────────────────────── */
 /* The card-back SVG fills the whole card face — no coloured backing box. */
@@ -887,20 +912,25 @@ html, body {
 /* ── Hand-rankings help drawer ────────────────────────────────────────────── */
 .drawer--help { width: min(72%, 300px); }
 .help-intro { font: 500 11px var(--f-body); color: var(--muted); margin-bottom: 4px; }
+/* Uniform 2-column grid: every entry has the SAME fixed label column, so all
+   10 rows align — rank+name left, the 5 cards (+ description) start at the
+   same x in every row. */
 .help-rank {
   background: var(--panel); border-radius: 10px; padding: 8px 10px;
-  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
-  column-gap: 8px; align-items: center;
+  display: grid; grid-template-columns: 76px 1fr; grid-template-rows: auto auto;
+  column-gap: 10px; align-items: center;
 }
-.help-rank__head { grid-column: 1 / 2; grid-row: 1 / 3; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.help-rank__head {
+  grid-column: 1 / 2; grid-row: 1 / 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
 .help-rank__no { font: 700 13px var(--f-num); color: var(--accent); }
-.help-rank__name { font: 700 11px var(--f-head); color: var(--ink); writing-mode: horizontal-tb; }
-.help-rank__cards { grid-column: 2 / 3; display: flex; gap: 3px; }
+.help-rank__name { font: 700 11px var(--f-head); color: var(--ink); text-align: center; line-height: 1.15; }
+.help-rank__cards { grid-column: 2 / 3; grid-row: 1 / 2; display: flex; gap: 3px; justify-content: flex-start; }
 .help-rank__cards .pcard { width: 22px; height: 30px; border-radius: 5px; box-shadow: 0 1px 3px rgba(33,29,26,.18); }
 .help-rank__cards .pcard__rank { font-size: 10px; }
 .help-rank__cards .pcard__suit svg { width: 8px; height: 8px; }
-.help-rank__desc { grid-column: 2 / 3; font: 500 10px var(--f-body); color: var(--muted); margin-top: 3px; }
-.help-rank__name { text-align: center; }
+.help-rank__desc { grid-column: 2 / 3; grid-row: 2 / 3; font: 500 10px var(--f-body); color: var(--muted); margin-top: 3px; }
 
 /* ── Prevent per-letter text wrapping in tight table chrome ───────────────── */
 .pcard__rank, .seat__name, .seat__chips, .seat__bet-amt,

@@ -127,6 +127,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   betting: 'no-limit',
   turnTimer: 30,
   winCondition: 'last-standing',
+  // Busted (0-chip) players get "X-ray" vision of everyone's live hole cards.
+  // They can no longer act, so it's a fun spectator perk — host's choice.
+  revealToBusted: false,
 });
 
 // "Increasing" blinds go up by progress, NOT a wall-clock timer: one level
@@ -145,6 +148,7 @@ export const BLIND_LEVEL_HANDS = 6;
  * @property {'no-limit'} betting
  * @property {number} turnTimer  seconds; 0 = off
  * @property {'last-standing'|'host-ends'} winCondition
+ * @property {boolean} revealToBusted  busted players see all live hole cards
  */
 
 /**
@@ -237,6 +241,8 @@ export function sanitizeSettings(input = {}) {
   o.maxSeats = Number.isInteger(seats)
     ? Math.min(SETTING_OPTIONS.maxSeats.max, Math.max(SETTING_OPTIONS.maxSeats.min, seats))
     : o.maxSeats;
+
+  o.revealToBusted = input.revealToBusted === true;
 
   return o;
 }
