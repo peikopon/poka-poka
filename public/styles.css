@@ -448,12 +448,16 @@ html, body {
   background: var(--accent); color: #fff;
   font: 700 9px var(--f-num); padding: 1px 6px; border-radius: 6px; white-space: nowrap;
 }
+/* Role badges (Dealer right corner, SB/BB left corner) share one size system
+   so they sit symmetrically on the avatar and read clearly on a phone. */
 .seat__dealer {
-  position: absolute; right: -8px; top: -6px;
-  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  position: absolute; right: -10px; top: -8px;
+  width: 25px; height: 25px; border-radius: 50%; background: #fff;
   border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(33, 29, 26, .18);
+  z-index: 2;
 }
-.seat__dealer svg { width: 14px; height: 14px; }
+.seat__dealer svg { width: 19px; height: 19px; }
 .seat__bet {
   position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 4px; white-space: nowrap;
@@ -775,16 +779,18 @@ html, body {
 
 /* ── Blind badges on seats / you ──────────────────────────────────────────── */
 .blind-badge {
-  position: absolute; left: -7px; top: -6px;
-  width: 18px; height: 18px; border-radius: 50%;
+  position: absolute; left: -10px; top: -8px;
+  width: 25px; height: 25px; border-radius: 50%;
   background: #fff; border: 1px solid var(--border);
   display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(33, 29, 26, .18);
+  z-index: 2;
 }
-.blind-badge svg { width: 13px; height: 13px; }
+.blind-badge svg { width: 19px; height: 19px; }
 .you-plate__name .blind-badge {
-  position: static; width: 16px; height: 16px; vertical-align: middle;
+  position: static; width: 22px; height: 22px; vertical-align: middle;
 }
-.you-plate__name .blind-badge svg { width: 12px; height: 12px; }
+.you-plate__name .blind-badge svg { width: 16px; height: 16px; }
 
 /* ── Card backs + mini cards + opponent cards ─────────────────────────────── */
 /* The card-back SVG fills the whole card face — no coloured backing box. */

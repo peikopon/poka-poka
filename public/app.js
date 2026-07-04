@@ -55,6 +55,18 @@ let prevHandNumber = null; // for hole-card deal animation
 let wasMyTurn = false;     // to chime once when it becomes my turn
 let prevPhase = null;      // to detect hand-over / game transitions
 let actDeadlineLocal = null; // turn deadline anchored to THIS device's clock
+let prevActionSeq = 0;     // last hand.lastAction.seq we played a sound for
+
+// Every player gets a distinct "voice": the same base TTS clip played at a
+// deterministic rate (pitch+speed) derived from their avatar token, so a given
+// player sounds identical on every device.
+const VOICE_RATES = {
+  'avatar-01': 1.0, 'avatar-02': 0.85, 'avatar-03': 1.14,
+  'avatar-04': 0.78, 'avatar-05': 1.26, 'avatar-06': 0.92,
+  'avatar-07': 1.07, 'avatar-08': 0.72, 'avatar-09': 1.2,
+};
+const voiceRateFor = (token) => VOICE_RATES[token] || 1;
+const VOICE_ACTIONS = ['check', 'call', 'raise', 'allin'];
 
 // pre-game (pre-state) flow scratch
 const draft = {
@@ -191,6 +203,7 @@ function showScreen(name) {
   document.body.classList.toggle('on-table', name === 'table');
   if (name === 'identity') enterIdentity();
   if (name === 'join') prefillJoinBoxes();
+  if (name === 'table') sound.loadVoices?.(); // pre-decode action voices
 }
 
 // On the identity screen, refresh which avatars are available. Hosting a new
@@ -254,6 +267,7 @@ function applyState(s) {
   if (s?.hand?.handNumber != null) prevHandNumber = s.hand.handNumber;
   prevPhase = s?.room?.phase ?? null;
   wasMyTurn = !!s?.hand?.legal;
+  if (s?.hand?.lastAction) prevActionSeq = s.hand.lastAction.seq;
 }
 
 // Compare the incoming snapshot with the previous one to fire sounds + flag
@@ -276,6 +290,17 @@ function detectTransitions(s) {
   }
   // It just became my turn.
   if (hand?.legal && !wasMyTurn) sound.play('turn');
+
+  // Someone acted → EVERY device plays it (the actor's included). `state` is
+  // still the PREVIOUS snapshot here; when it's null this is our first
+  // snapshot (join/rejoin), so we skip replaying a stale action.
+  const la = hand?.lastAction;
+  if (la && state && la.seq !== prevActionSeq) {
+    const actor = s?.players?.find((p) => p.id === la.playerId);
+    if (la.action === 'allin') sound.play('allin'); // dramatic hit for the whole table
+    if (VOICE_ACTIONS.includes(la.action)) sound.voice(la.action, voiceRateFor(actor?.token));
+    else if (la.action === 'fold') sound.play('fold');
+  }
 
   // A betting round ended → the street bets get gathered into the pot. This
   // happens when the board grows (new street) or the hand ends. Animate it
@@ -341,6 +366,7 @@ function defaultSettings() {
   return {
     startingStack: 2500, smallBlind: 5, bigBlind: 10, blindsMode: 'increasing',
     maxSeats: 8, betting: 'no-limit', turnTimer: 30, winCondition: 'last-standing',
+    revealToBusted: false,
   };
 }
 
@@ -374,6 +400,11 @@ function buildRulesOptions() {
   fillSeg('[data-setting="winCondition"] .seg', [
     { v: 'last-standing', t: 'Last chips' }, { v: 'host-ends', t: 'Host ends' },
   ], draft.settings.winCondition, (v) => { draft.settings.winCondition = v; });
+
+  // Busted players see cards (X-ray for eliminated friends)
+  fillSeg('[data-setting="revealToBusted"] .seg', [
+    { v: false, t: 'Off' }, { v: true, t: 'On' },
+  ], draft.settings.revealToBusted, (v) => { draft.settings.revealToBusted = v; });
 
   // Seats stepper
   document.getElementById('seats-value').textContent = draft.settings.maxSeats;
@@ -478,12 +509,23 @@ function wireEvents() {
   document.getElementById('home-host').addEventListener('click', () => {
     draft.intent = 'host'; showScreen('rules');
   });
-  setupCodeEntry('#home-join-form', (code) => { draft.code = code; });
+  setupCodeEntry('#home-join-form', (code) => {
+    draft.code = code;
+    const err = document.getElementById('home-error');
+    if (err) err.hidden = true; // typing clears the "enter a code" error
+  });
   document.getElementById('home-join-go').addEventListener('click', goJoinFromHome);
   document.getElementById('home-join-form').addEventListener('submit', (e) => { e.preventDefault(); goJoinFromHome(); });
   document.getElementById('home-spectate').addEventListener('click', () => {
-    if (draft.code.length === 4) spectate(draft.code);
-    else showScreen('join');
+    // Watching needs a table code: block with an inline error rather than
+    // silently proceeding (or navigating) without one.
+    const err = document.getElementById('home-error');
+    if (draft.code.length !== 4) {
+      if (err) { err.hidden = false; err.textContent = 'Enter the 4-letter code first to watch a table.'; }
+      return;
+    }
+    if (err) err.hidden = true;
+    spectate(draft.code);
   });
 
   // Back buttons
@@ -693,7 +735,9 @@ function sendAction(action, amount) {
   if (amount != null) payload.amount = amount;
   actionPending = true;
   setActionBarLocked(true);
-  sound.play(action); // fold | check | call | raise | allin
+  // Tap feedback only — the action's voice/sound plays for EVERYONE (us
+  // included) when the server broadcasts hand.lastAction back.
+  sound.play('click');
   net.send('action', payload);
 }
 
@@ -933,7 +977,15 @@ function renderSeats(players, hand, you) {
   const seats = document.getElementById('seats');
   seats.innerHTML = '';
   // Render everyone EXCEPT "you" (you sit at the bottom in the you-zone).
-  const others = players.filter((p) => p.id !== you.id);
+  // Every viewer renders the SAME physical circle: turn order = ascending seat
+  // index = clockwise. With you fixed at the bottom, the player who acts after
+  // you must appear at your LEFT, continuing left → top → right back to you.
+  // So we rotate the seat-ordered list to start just after your seat, and the
+  // arc positions run left-to-right. Spectators (no seat) see absolute order.
+  const bySeat = [...players].sort((a, b) => a.seat - b.seat);
+  const myIdx = you ? bySeat.findIndex((p) => p.id === you.id) : -1;
+  const rotated = myIdx >= 0 ? [...bySeat.slice(myIdx + 1), ...bySeat.slice(0, myIdx)] : bySeat;
+  const others = rotated.filter((p) => !you || p.id !== you.id);
   const roles = blindRoles(players, hand);
 
   // Distribute around the top arc of the oval. Positions as % of felt-wrap.
@@ -1260,8 +1312,10 @@ function renderResults() {
   const cards = document.getElementById('results-cards');
   cards.innerHTML = (winner?.bestCards || []).map(cardHtml).join('');
 
-  // standings (sorted by chips desc)
-  const sorted = [...players].sort((a, b) => b.chips - a.chips);
+  // standings: chips desc; among busted (0-chip) players the one who survived
+  // MORE hands ranks higher — busting first = last place.
+  const sorted = [...players].sort((a, b) =>
+    (b.chips - a.chips) || ((b.bustedHand || 0) - (a.bustedHand || 0)));
   const st = document.getElementById('results-standings');
   st.innerHTML = '';
   sorted.forEach((p, i) => {

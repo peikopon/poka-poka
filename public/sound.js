@@ -106,6 +106,52 @@ export function createSound() {
     if (f) { try { f(); } catch { /* ignore */ } }
   }
 
+  // ── Voice clips (pre-recorded TTS words) ──────────────────────────────────
+  // One base clip per action word lives in /voice/*.wav. Per-PLAYER uniqueness
+  // comes from `rate` (playbackRate = pitch + speed shift), which the caller
+  // derives deterministically from the player's avatar token — so the same
+  // player always "speaks" with the same voice on every device.
+  const VOICE_URLS = {
+    check: './voice/check.wav',
+    call: './voice/call.wav',
+    raise: './voice/raise.wav',
+    allin: './voice/allin.wav',
+  };
+  const voiceBufs = {};
+  let voicesRequested = false;
+
+  function loadVoices() {
+    if (voicesRequested) return;
+    voicesRequested = true;
+    const c = ensure();
+    if (!c) return;
+    for (const [name, url] of Object.entries(VOICE_URLS)) {
+      fetch(url)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+        .then((ab) => c.decodeAudioData(ab))
+        .then((buf) => { voiceBufs[name] = buf; })
+        .catch(() => { /* fall back to the synth beep for this word */ });
+    }
+  }
+
+  function voice(name, rate = 1) {
+    if (!enabled) return;
+    unlock();
+    const c = ensure();
+    if (!c) return;
+    const buf = voiceBufs[name];
+    if (!buf) { loadVoices(); play(name); return; } // not loaded yet → beep fallback
+    try {
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = rate;
+      const g = c.createGain();
+      g.gain.value = 0.9;
+      src.connect(g); g.connect(master);
+      src.start();
+    } catch { /* ignore */ }
+  }
+
   function setEnabled(on) {
     enabled = !!on;
     savePref();
@@ -114,6 +160,8 @@ export function createSound() {
 
   return {
     play,
+    voice,
+    loadVoices,
     unlock,
     isOn: () => enabled,
     toggle: () => { setEnabled(!enabled); return enabled; },

@@ -204,6 +204,22 @@ Rules of thumb:
 - **Lifecycle:** `lobby` → `in-hand` ⇄ `hand-over` (repeats per hand) → `game-over`.
 - **Per hand:** post blinds → deal hole cards → preflop → flop → turn → river →
   showdown → award pot(s) → reveal (showdown only) → rotate button → next hand.
+- **Pacing (developer-tunable constants at the top of `rooms.js`):**
+  `STREET_PAUSE_MS` (2s) — after every betting round the server pauses before
+  dealing the next street, so players see the final bets; all-in runouts reveal
+  one street per pause. `HAND_OVER_MS` (8s) — winner-banner time before the
+  next hand deals. Adjust game tempo by editing these two numbers.
+- **Action sounds table-wide:** every applied action is broadcast in the snapshot
+  as `hand.lastAction = { seq, playerId, action }` (a call/raise that empties the
+  stack is normalized to `allin`). Clients diff `seq` and play the action's TTS
+  voice clip (`public/voice/*.wav`; per-player pitch derived from the avatar
+  token in `app.js` `VOICE_RATES`) on EVERY device, plus a dramatic all-in SFX.
+- **Final ranking:** when a player ends a hand at 0 chips, `player.bustedHand`
+  records the hand number; results rank 0-chip players by it — busting first =
+  last place.
+- **Seat layout is viewer-relative:** each client rotates the seat-ordered player
+  list to start after their own seat, so turn order always flows clockwise from
+  "you" at the bottom (left → top → right). Consistent across all viewers.
 - **Two independent timers:**
   - **Turn timer** (host setting 15/30/60s, or Off): on timeout, auto-**check if
     possible else fold** — never auto-calls. Disconnected players use this SAME clock
@@ -231,6 +247,7 @@ must agree on these exact options:
 | Betting | **No-Limit** / Pot / Fixed | No-Limit |
 | Turn timer | 15s / **30s** / 60s / Off | 30s |
 | Win condition | **Last chips standing** / Host ends | Last chips standing |
+| Busted players see cards | **Off** / On | Off — `revealToBusted`: when On, an eliminated (0-chip) seated player sees everyone's live hole cards (they can no longer act, so it's a spectator perk) |
 
 The lobby surfaces a subset as tags (e.g. `No-Limit`, `5/10 ↑`, `2.5k`, `30s`).
 
