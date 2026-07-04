@@ -993,12 +993,13 @@ function renderLog() {
         ${w.handName ? `<span class="logent__hand">${escapeHtml(w.handName)}</span>` : ''}
       </div>`;
     }).join('');
-    // Showdown → the winning 5 cards. Fold-win → just the community cards.
+    // Showdown → the winning 5 cards. Fold-win → the community cards padded
+    // with face-down backs to a full row of 5: the backs show at a glance how
+    // far the hand got before everyone folded.
     const cards = h.showdown && h.winners?.[0]?.bestCards?.length
       ? `<div class="logent__cards">${h.winners[0].bestCards.map(cardMiniHtml).join('')}</div>`
-      : (h.board?.length
-        ? `<div class="logent__cards logent__cards--board"><span class="logent__cap">Table</span>${h.board.map(cardMiniHtml).join('')}</div>`
-        : `<div class="logent__cap">Folded before the flop</div>`);
+      : `<div class="logent__cards">${Array.from({ length: 5 }, (_, i) =>
+          (h.board?.[i] ? cardMiniHtml(h.board[i]) : cardBackMiniHtml())).join('')}</div>`;
     const note = h.showdown ? '' : '<span class="logent__cap">· won uncontested</span>';
     return `
       <div class="logent">
