@@ -356,10 +356,12 @@ function syncSoundButton() {
   btn.setAttribute('aria-label', on ? 'Mute sound' : 'Unmute sound');
 }
 
+// winCondition is no longer host-configurable: games run last-chips-standing,
+// and the host can always end early with the table's Finish button.
 function defaultSettings() {
   return {
     startingStack: 2500, smallBlind: 5, bigBlind: 10, blindsMode: 'increasing',
-    maxSeats: 8, betting: 'no-limit', turnTimer: 30, winCondition: 'last-standing',
+    maxSeats: 8, betting: 'no-limit', turnTimer: 30,
     revealToBusted: false,
   };
 }
@@ -389,11 +391,6 @@ function buildRulesOptions() {
   fillSeg('[data-setting="turnTimer"] .seg', [
     { v: 15, t: '15s' }, { v: 30, t: '30s' }, { v: 60, t: '60s' }, { v: 0, t: 'Off' },
   ], draft.settings.turnTimer, (v) => { draft.settings.turnTimer = v; });
-
-  // Win condition
-  fillSeg('[data-setting="winCondition"] .seg', [
-    { v: 'last-standing', t: 'Last chips' }, { v: 'host-ends', t: 'Host ends' },
-  ], draft.settings.winCondition, (v) => { draft.settings.winCondition = v; });
 
   // Busted players see cards (X-ray for eliminated friends)
   fillSeg('[data-setting="revealToBusted"] .seg', [

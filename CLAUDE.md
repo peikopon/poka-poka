@@ -252,8 +252,12 @@ must agree on these exact options:
 | Max seats | stepper, up to 8 | 8 |
 | Betting | **No-Limit** / Pot / Fixed | No-Limit |
 | Turn timer | 15s / **30s** / 60s / Off | 30s |
-| Win condition | **Last chips standing** / Host ends | Last chips standing |
 | Busted players see cards | **Off** / On | Off — `revealToBusted`: when On, an eliminated (0-chip) seated player sees everyone's live hole cards (they can no longer act, so it's a spectator perk) |
+
+> Win condition is **not** host-configurable (removed from the rules screen):
+> games always run last-chips-standing, and the host can end early anytime with
+> the table's **Finish** button. The server still accepts/defaults `winCondition`
+> in the protocol for back-compat.
 
 The lobby surfaces a subset as tags (e.g. `No-Limit`, `5/10 ↑`, `2.5k`, `30s`).
 
