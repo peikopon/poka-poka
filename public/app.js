@@ -6,7 +6,7 @@
 
 import { createNet } from './net.js';
 import { MOCKS } from './mock-state.js';
-import { createSound } from './sound.js';
+import { createSound, ASSET_VERSION } from './sound.js';
 
 // Empty so icons reference the INLINED sprite (<use href="#id">). The sprite is
 // fetched and injected into the page at boot — external-sprite <use> does not
@@ -81,9 +81,10 @@ const log = [];            // client-side action log entries (best-effort)
 // fills everywhere (external-sprite <use> drops gradients on iOS Safari).
 async function injectSprite() {
   try {
-    // 'reload' bypasses the HTTP cache so edits to the sprite (card-backs,
-    // avatars, icons) always show up — 'force-cache' froze the old sprite.
-    const res = await fetch('/assets/icons/poker-icons.svg', { cache: 'reload' });
+    // The sprite is cached for a day (it's big and rarely changes). The
+    // ?v=ASSET_VERSION query is the update lever: bump it in sound.js after
+    // editing the sprite and every device fetches the new file immediately.
+    const res = await fetch(`/assets/icons/poker-icons.svg?v=${ASSET_VERSION}`);
     const txt = await res.text();
     const host = document.getElementById('sprite-host');
     if (host) host.innerHTML = txt;

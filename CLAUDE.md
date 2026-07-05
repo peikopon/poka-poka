@@ -50,8 +50,13 @@ Run locally: `npm install` then `npm run dev` (or `npm start`), open
 - Host gating: **Start** is disabled until all non-host players are ready; host can
   **Finish** the game from the table; **host leaving the lobby closes the room**.
 
-**Caching:** the server sends `Cache-Control: no-store` for all static files (no build
-hashing), so edits always show on a normal reload — important for phones / Add-to-Home-Screen.
+**Caching:** two policies. HTML/JS/CSS are `Cache-Control: no-store` (no build
+hashing), so code edits always show on a normal reload — important for phones /
+Add-to-Home-Screen. The heavy, rarely-changing assets (`public/voice_pack/` and
+the icon sprite under `assets/icons/`) are cached **1 day** and requested with
+`?v=<ASSET_VERSION>` (exported from `public/sound.js`) — **bump that constant
+whenever a voice clip or the sprite changes** so every device re-downloads
+immediately instead of waiting out the cache.
 
 **Hand log:** the Log drawer lists every finished hand (server keeps the last 30
 in `room.handLog`, broadcast as `ClientState.log`): winner(s) + amount + pot, and
