@@ -13,14 +13,17 @@ static front-end and runs the authoritative game over WebSocket.
 
 ## Current status
 
-**v1 is built and working end-to-end** — No-Limit Texas Hold'em with the full
-lobby→table→results flow, redesigned betting bar, spectators, chat, emotes,
-sound, card animations, and a hand-rankings guide. What exists:
+**v1.1 is built and working end-to-end** — No-Limit Texas Hold'em with the full
+lobby→table→results flow, redesigned betting bar, spectators, chat, avatar-anchored
+emotes, per-character voices, card animations, a hand-history log, and a
+hand-rankings guide. What exists:
 
 - `server/` — Express + native `ws` server, room manager, poker engine.
   - `server/poker/` engine has unit tests: `npm test` (node:test) → 31/31 pass.
 - `public/` — vanilla front-end: all screens + the redesigned bottom action bar,
-  `sound.js` (synthesized SFX), serverless fixtures `/index.html?mock=lobby|turn|showdown|handover`.
+  `sound.js` (synth SFX + voice-pack playback; exports `ASSET_VERSION`),
+  `voice_pack/` (36 recorded MP3s: `<fruit>-<word>.mp3`), `voice-test.html`
+  (dev review grid), serverless fixtures `/index.html?mock=lobby|turn|showdown|handover`.
 - `assets/icons/` — the icon set, served at `/assets` and **inlined** into the page
   at boot (so gradient `<use>` fills resolve on iOS Safari).
 - `package.json`, `render.yaml`, `.gitignore`, `README.md`.
