@@ -30,9 +30,15 @@ static front-end *and* runs the authoritative game over WebSocket on the same po
 - Redesigned betting bar: **Min / 2× / 3× / All-in** presets, a big slider with
   ± steppers, a live "Raise to" amount, and your own turn countdown.
 - **Spectators** ("Watch a table") join instantly as guests — no name or avatar.
-- **Chat**, **emoji reactions**, and synthesized **sound effects** (with a mute toggle).
+- **Character voices:** every fruit avatar speaks its own recorded voice on
+  Check / Call / Raise / All-in — heard by the **whole table**, plus a dramatic
+  all-in sound. Synthesized SFX for everything else, with a mute toggle.
+- **Chat** and **emoji reactions** that pop next to the sender's avatar.
+- **Hand-history log:** winner, net profit and pot for every hand — fold-wins
+  keep the winner's cards secret (only community cards shown).
 - **Card animations** (dealing + community reveal) and a **chips-to-pot** animation.
-- **Hand-rankings guide**, winner banner with the **pot amount won**, blind badges.
+- **Hand-rankings guide**, winner banner with the **pot amount won**, blind badges,
+  and a host option to let **busted players watch everyone's cards**.
 - **Increasing blinds** that rise by *progress* (every few hands and on each knock-out),
   not a wall-clock timer.
 - **Add to Home Screen / fullscreen** support for a chrome-less, app-like feel.
@@ -66,8 +72,9 @@ a game — handy for design review. Run the app and open:
 | Real-time | **Native `ws`** | Hand-rolled rooms, reconnection and ping/pong heartbeats (no Socket.IO). |
 | Front-end | **Vanilla HTML / CSS / JS** | **No build step.** Single page; screens toggled by a class. |
 | State | **In-memory** | Rooms live in a `Map`; no database. |
-| Audio | **Web Audio API** | Sound effects are synthesized at runtime — zero audio files. |
+| Audio | **Web Audio API + voice pack** | SFX synthesized at runtime; one recorded MP3 per character per action in `public/voice_pack/` (review grid: `/voice-test.html`). |
 | Icons | **One SVG sprite** | `assets/icons/poker-icons.svg`, inlined at boot (so gradient fills resolve on iOS Safari). |
+| Caching | **Split policy** | HTML/JS/CSS are `no-store` (code updates reach phones on a plain reload); the voice pack + sprite cache for **1 day** via `?v=<ASSET_VERSION>` — bump that constant in `sound.js` after replacing a voice/sprite to push it to all devices immediately. |
 | Tests | **`node --test`** | Pure poker engine has unit tests (hand ranking, side pots, lifecycle). |
 | Hosting | **Render** (single Web Service) | One service serves HTTP + WS; see `render.yaml`. |
 
@@ -90,7 +97,9 @@ poka-poka/
 │   ├── styles.css        # Design tokens + every screen + the action bar
 │   ├── app.js            # State store, render loop, screen routing, action senders
 │   ├── net.js            # WebSocket client + sessionStorage reconnect
-│   ├── sound.js          # Synthesized sound-effects kit
+│   ├── sound.js          # Synth SFX + voice-pack playback (ASSET_VERSION lives here)
+│   ├── voice_pack/       # Recorded character voices: <fruit>-<word>.mp3 (36 clips)
+│   ├── voice-test.html   # Dev tool: play every character's voice clips
 │   └── mock-state.js     # Sample ClientState fixtures for the ?mock= previews
 ├── assets/icons/         # The icon set (sprite, manifest, palette, preview)
 ├── package.json
@@ -185,6 +194,5 @@ International (CC BY-NC 4.0)** — see [LICENSE](LICENSE).
 You may view, share, and adapt this project **with attribution** and **for
 non-commercial purposes only**. Commercial use is not permitted without permission.
 
-> Status: casual hobby project — No-Limit Texas Hold'em v1, no accounts, no real money.
-> Pot-Limit / Fixed-Limit betting, a hand-history log, and persistence are possible
-> future additions.
+> Status: casual hobby project — No-Limit Texas Hold'em v1.1, no accounts, no real money.
+> Pot-Limit / Fixed-Limit betting and persistence are possible future additions.

@@ -7,6 +7,12 @@
 
 const PREF_KEY = 'pokapoka:sound';
 
+// Cache-buster for the 1-day-cached heavy assets (voice pack + icon sprite).
+// BUMP THIS whenever you replace a voice clip or edit the sprite: the new
+// query string makes every device fetch the new file immediately instead of
+// waiting out the 24h cache.
+export const ASSET_VERSION = '1';
+
 export function createSound() {
   let ctx = null;
   let master = null;
@@ -128,7 +134,7 @@ export function createSound() {
     for (const fruit of Object.values(TOKEN_FRUIT)) {
       for (const word of VOICE_WORDS) {
         const key = `${fruit}-${word}`;
-        fetch(`./voice_pack/${key}.mp3`)
+        fetch(`./voice_pack/${key}.mp3?v=${ASSET_VERSION}`)
           .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
           .then((ab) => c.decodeAudioData(ab))
           .then((buf) => { voiceBufs[key] = buf; })

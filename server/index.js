@@ -19,12 +19,23 @@ app.disable('x-powered-by');
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 
 // Static: the front-end and the shared icon sprite.
-// No-store so phones/browsers always fetch the latest HTML/JS/CSS/sprite — this
-// is a small LAN/casual app with no build hashing, so stale caches (especially
-// on "Add to Home Screen") just cause confusion. Cheap to refetch.
-const noStore = (res) => res.setHeader('Cache-Control', 'no-store, must-revalidate');
-app.use(express.static(path.join(ROOT, 'public'), { setHeaders: noStore, etag: false, lastModified: false }));
-app.use('/assets', express.static(path.join(ROOT, 'assets'), { setHeaders: noStore, etag: false, lastModified: false }));
+// Two cache policies:
+//  - HTML/JS/CSS → no-store: phones always get the newest code on reload (no
+//    build hashing, and "Add to Home Screen" caches aggressively).
+//  - voice_pack + icons → cache 1 day: they're ~85% of a visit's bytes and
+//    rarely change. The CLIENT requests them with ?v=<ASSET_VERSION> (see
+//    public/sound.js) — bump that constant when you replace a sprite/voice
+//    and every device re-downloads immediately (new URL = new cache entry;
+//    the old one just expires away).
+const setCache = (res, filePath) => {
+  if (/[\\/](voice_pack|icons)[\\/]/.test(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  } else {
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  }
+};
+app.use(express.static(path.join(ROOT, 'public'), { setHeaders: setCache, etag: false, lastModified: false }));
+app.use('/assets', express.static(path.join(ROOT, 'assets'), { setHeaders: setCache, etag: false, lastModified: false }));
 
 // SPA fallback → index.html for any non-asset GET.
 app.get('*', (_req, res) => {

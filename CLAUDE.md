@@ -13,14 +13,17 @@ static front-end and runs the authoritative game over WebSocket.
 
 ## Current status
 
-**v1 is built and working end-to-end** — No-Limit Texas Hold'em with the full
-lobby→table→results flow, redesigned betting bar, spectators, chat, emotes,
-sound, card animations, and a hand-rankings guide. What exists:
+**v1.1 is built and working end-to-end** — No-Limit Texas Hold'em with the full
+lobby→table→results flow, redesigned betting bar, spectators, chat, avatar-anchored
+emotes, per-character voices, card animations, a hand-history log, and a
+hand-rankings guide. What exists:
 
 - `server/` — Express + native `ws` server, room manager, poker engine.
   - `server/poker/` engine has unit tests: `npm test` (node:test) → 31/31 pass.
 - `public/` — vanilla front-end: all screens + the redesigned bottom action bar,
-  `sound.js` (synthesized SFX), serverless fixtures `/index.html?mock=lobby|turn|showdown|handover`.
+  `sound.js` (synth SFX + voice-pack playback; exports `ASSET_VERSION`),
+  `voice_pack/` (36 recorded MP3s: `<fruit>-<word>.mp3`), `voice-test.html`
+  (dev review grid), serverless fixtures `/index.html?mock=lobby|turn|showdown|handover`.
 - `assets/icons/` — the icon set, served at `/assets` and **inlined** into the page
   at boot (so gradient `<use>` fills resolve on iOS Safari).
 - `package.json`, `render.yaml`, `.gitignore`, `README.md`.
@@ -50,8 +53,13 @@ Run locally: `npm install` then `npm run dev` (or `npm start`), open
 - Host gating: **Start** is disabled until all non-host players are ready; host can
   **Finish** the game from the table; **host leaving the lobby closes the room**.
 
-**Caching:** the server sends `Cache-Control: no-store` for all static files (no build
-hashing), so edits always show on a normal reload — important for phones / Add-to-Home-Screen.
+**Caching:** two policies. HTML/JS/CSS are `Cache-Control: no-store` (no build
+hashing), so code edits always show on a normal reload — important for phones /
+Add-to-Home-Screen. The heavy, rarely-changing assets (`public/voice_pack/` and
+the icon sprite under `assets/icons/`) are cached **1 day** and requested with
+`?v=<ASSET_VERSION>` (exported from `public/sound.js`) — **bump that constant
+whenever a voice clip or the sprite changes** so every device re-downloads
+immediately instead of waiting out the cache.
 
 **Hand log:** the Log drawer lists every finished hand (server keeps the last 30
 in `room.handLog`, broadcast as `ClientState.log`): winner(s) + amount + pot, and
